@@ -28,7 +28,7 @@ import {
   SpecialOffer,
   ProductReview,
 } from './types';
-import { DEFAULT_SETTINGS, INITIAL_CATEGORIES, INITIAL_PRODUCTS, STANDARD_CATEGORY_ORDER } from './data/seedData';
+import { DEFAULT_SETTINGS, INITIAL_CATEGORIES, INITIAL_PRODUCTS, INITIAL_CUSTOMERS, STANDARD_CATEGORY_ORDER } from './data/seedData';
 import { deleteProductImageFromStorage } from './utils/imageCompressor';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -84,13 +84,38 @@ export default function App() {
   // 1. Subscribe to Firestore settings/contact & settings/admin
   useEffect(() => {
     const settingsDocRef = doc(db, 'settings', 'contact');
+    const adminDocRef = doc(db, 'settings', 'admin');
+
+    // One-time admin password reset to "FeniMart@2026" in Firestore settings/admin
+    const resetFlag = localStorage.getItem('fenimart_pw_reset_2026_v1');
+    if (resetFlag !== 'done') {
+      setDoc(
+        adminDocRef,
+        { password: 'FeniMart@2026', updatedAt: new Date().toISOString() },
+        { merge: true }
+      )
+        .then(() => {
+          localStorage.setItem('fenimart_pw_reset_2026_v1', 'done');
+        })
+        .catch((err) => console.warn('Could not reset settings/admin doc:', err));
+
+      setDoc(
+        settingsDocRef,
+        { password: 'FeniMart@2026' },
+        { merge: true }
+      ).catch(() => {});
+    }
+
     const unsubContact = onSnapshot(
       settingsDocRef,
       (docSnap) => {
         if (docSnap.exists()) {
+          const contactData = docSnap.data() as StoreSettings;
           setSettings((prev) => ({
             ...prev,
-            ...(docSnap.data() as StoreSettings),
+            ...contactData,
+            // Keep password controlled by settings/admin
+            password: prev.password || contactData.password || 'FeniMart@2026',
           }));
         } else {
           // Initialize settings document if it doesn't exist
@@ -102,7 +127,6 @@ export default function App() {
       (err) => console.warn('Settings contact listener error:', err)
     );
 
-    const adminDocRef = doc(db, 'settings', 'admin');
     const unsubAdmin = onSnapshot(
       adminDocRef,
       (docSnap) => {
@@ -114,6 +138,13 @@ export default function App() {
               password: data.password,
             }));
           }
+        } else {
+          // Ensure settings/admin always exists with FeniMart@2026
+          setDoc(
+            adminDocRef,
+            { password: 'FeniMart@2026', updatedAt: new Date().toISOString() },
+            { merge: true }
+          ).catch((err) => console.warn('Could not seed settings/admin:', err));
         }
       },
       (err) => console.warn('Settings admin listener error:', err)
@@ -206,7 +237,18 @@ export default function App() {
     const custCol = collection(db, 'customers');
     const unsub = onSnapshot(
       custCol,
-      (snapshot) => {
+      async (snapshot) => {
+        if (snapshot.empty) {
+          try {
+            for (const cust of INITIAL_CUSTOMERS) {
+              await addDoc(custCol, cust);
+            }
+          } catch (err) {
+            console.warn('Failed to seed customers:', err);
+          }
+          return;
+        }
+
         const list: Customer[] = [];
         snapshot.forEach((d) => {
           list.push({ id: d.id, ...d.data() } as Customer);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -20,10 +20,22 @@ import {
   Sparkles,
   MapPin,
   Eye,
+  Crown,
+  Trophy,
+  Award,
+  Medal,
+  Star,
+  ChevronRight,
 } from 'lucide-react';
 import { Order, Transaction, Customer, Product } from '../../types';
 import { DailyTrendChart, MonthlyBarChart } from '../Charts';
+import { MonthlyDeliveredSalesReport } from './MonthlyDeliveredSalesReport';
 import { exportToExcel } from '../../utils/excelExport';
+import {
+  calculateAllCustomerLoyalties,
+  toBanglaDigits,
+  LOYALTY_TIERS,
+} from '../../utils/loyalty';
 
 interface DashboardTabProps {
   orders: Order[];
@@ -69,6 +81,11 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const totalOrders = orders.length;
   const pendingOrders = orders.filter((o) => o.status === 'Pending').length;
   const totalCustomers = customers.length;
+
+  // Customer Loyalty Score & VIP Rankings Calculation based on total purchase volume
+  const loyaltyData = useMemo(() => {
+    return calculateAllCustomerLoyalties(customers, orders);
+  }, [customers, orders]);
 
   // Order status normalization & calculations for Order Inbox
   const normalizeStatus = (status?: string): 'new' | 'confirmed' | 'delivered' | 'cancelled' => {
@@ -671,7 +688,228 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         </div>
       </div>
 
-      {/* Charts Section */}
+      {/* Recharts Monthly Delivered Sales Report Visualization */}
+      <MonthlyDeliveredSalesReport orders={orders} onNavigateTab={onNavigateTab} />
+
+      {/* Customer Loyalty Score & VIP Rankings Leaderboard */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-md shadow-amber-500/20 shrink-0">
+              <Crown className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-black text-slate-800">
+                  গ্রাহক লয়ালটি স্কোর ও ভিআইপি লিডারবোর্ড
+                </h3>
+                <span className="bg-amber-100 text-amber-800 text-xs px-2.5 py-0.5 rounded-full font-bold">
+                  ক্রয় ভলিউম ভিত্তিক
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                মোট ক্রয় ভলিউমের (৳১০০ = ১ পয়েন্ট + মাইলস্টোন বোনাস) ভিত্তিতে গ্রাহকদের স্বয়ংক্রিয় লয়ালটি র‍্যাঙ্কিং
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigateTab('customers')}
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-[#0A4A29] text-white text-xs font-bold transition shadow-xs cursor-pointer min-h-[44px]"
+          >
+            <span>কাস্টমার ম্যানেজমেন্টে বিস্তারিত দেখুন</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Loyalty Summary Statistics Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-purple-50/70 border border-purple-200/80 p-3.5 rounded-xl">
+            <div className="flex items-center justify-between text-purple-700 text-xs font-bold mb-1">
+              <span>ভিআইপি গ্রাহক</span>
+              <Crown className="w-4 h-4 text-purple-600" />
+            </div>
+            <div className="text-2xl font-black text-purple-900">
+              {toBanglaDigits(loyaltyData.summary.vipCount)} <span className="text-xs font-medium text-purple-600">জন</span>
+            </div>
+            <span className="text-[10px] text-purple-600 font-medium">প্ল্যাটিনাম ও গোল্ড সদস্য</span>
+          </div>
+
+          <div className="bg-emerald-50/70 border border-emerald-200/80 p-3.5 rounded-xl">
+            <div className="flex items-center justify-between text-emerald-700 text-xs font-bold mb-1">
+              <span>মোট ক্রয় ভলিউম</span>
+              <DollarSign className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="text-xl sm:text-2xl font-black text-emerald-900">
+              ৳ {loyaltyData.summary.totalPurchaseVolume.toLocaleString('en-US')}
+            </div>
+            <span className="text-[10px] text-emerald-600 font-medium">নিবন্ধিত সকল গ্রাহকের মোট ক্রয়</span>
+          </div>
+
+          <div className="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-xl">
+            <div className="flex items-center justify-between text-amber-700 text-xs font-bold mb-1">
+              <span>গড় লয়ালটি স্কোর</span>
+              <Star className="w-4 h-4 text-amber-600" />
+            </div>
+            <div className="text-2xl font-black text-amber-900">
+              {toBanglaDigits(loyaltyData.summary.averageScore)} <span className="text-xs font-medium text-amber-600">পয়েন্ট</span>
+            </div>
+            <span className="text-[10px] text-amber-600 font-medium">গ্রাহক প্রতি গড় স্কোর</span>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
+            <div className="flex items-center justify-between text-slate-700 text-xs font-bold mb-1">
+              <span>সর্বোচ্চ স্কোরার (#১)</span>
+              <Trophy className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="text-sm font-bold text-slate-900 truncate">
+              {loyaltyData.summary.topCustomer?.name || 'ডাটা নেই'}
+            </div>
+            <span className="text-[11px] text-[#0A4A29] font-bold">
+              {loyaltyData.summary.topCustomer ? `${loyaltyData.summary.topCustomer.scoreDisplayBangla} পয়েন্ট (৳${loyaltyData.summary.topCustomer.totalPurchase.toLocaleString('en-US')})` : '—'}
+            </span>
+          </div>
+        </div>
+
+        {/* Tier Distribution Pills */}
+        <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+          <span className="font-bold text-slate-500">স্তর বিন্যাস:</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-100 text-purple-800 font-bold border border-purple-200">
+            <span>👑 প্ল্যাটিনাম (৳২০k+)</span>
+            <span className="bg-purple-200/70 text-purple-900 px-1.5 py-0.2 rounded-full text-[10px]">{toBanglaDigits(loyaltyData.summary.tierCounts.platinum)}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 font-bold border border-amber-200">
+            <span>🥇 গোল্ড (৳১০k+)</span>
+            <span className="bg-amber-200/70 text-amber-900 px-1.5 py-0.2 rounded-full text-[10px]">{toBanglaDigits(loyaltyData.summary.tierCounts.gold)}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold border border-slate-200">
+            <span>🥈 সিলভার (৳৫k+)</span>
+            <span className="bg-slate-200/70 text-slate-800 px-1.5 py-0.2 rounded-full text-[10px]">{toBanglaDigits(loyaltyData.summary.tierCounts.silver)}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-100 text-orange-800 font-bold border border-orange-200">
+            <span>🥉 ব্রোঞ্জ (৳১.৫k+)</span>
+            <span className="bg-orange-200/70 text-orange-900 px-1.5 py-0.2 rounded-full text-[10px]">{toBanglaDigits(loyaltyData.summary.tierCounts.bronze)}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">
+            <span>🌱 সাধারণ গ্রাহক</span>
+            <span className="bg-emerald-100 text-emerald-900 px-1.5 py-0.2 rounded-full text-[10px]">{toBanglaDigits(loyaltyData.summary.tierCounts.starter)}</span>
+          </span>
+        </div>
+
+        {/* Top Loyalty Customers Table / Podium */}
+        <div className="border border-slate-200 rounded-xl overflow-hidden">
+          <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <span>শীর্ষ লয়াল কাস্টমার লিডারবোর্ড (টপ ৫)</span>
+            </span>
+            <span className="text-[11px] text-slate-400">সর্বোচ্চ ক্রয় ও স্কোর অনুযায়ী ক্রমবিন্যাস</span>
+          </div>
+
+          {loyaltyData.rankedList.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm">
+              কোনো কাস্টমার তথ্য পাওয়া যায়নি
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm">
+                <thead className="bg-slate-100/70 text-slate-600 font-bold uppercase text-[11px]">
+                  <tr>
+                    <th className="px-4 py-3 text-center">র‍্যাঙ্ক</th>
+                    <th className="px-4 py-3">গ্রাহকের নাম ও ফোন</th>
+                    <th className="px-4 py-3">লয়ালটি স্তর (Tier)</th>
+                    <th className="px-4 py-3 text-right">মোট ক্রয় ভলিউম</th>
+                    <th className="px-4 py-3 text-center">লয়ালটি স্কোর</th>
+                    <th className="px-4 py-3">পরবর্তী স্তর অগ্রগতি</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {loyaltyData.rankedList.slice(0, 5).map((item) => {
+                    const isTop1 = item.rank === 1;
+                    const isTop2 = item.rank === 2;
+                    const isTop3 = item.rank === 3;
+                    return (
+                      <tr
+                        key={item.phone || item.name}
+                        onClick={() => onNavigateTab('customers')}
+                        className={`transition hover:bg-amber-50/40 cursor-pointer ${
+                          isTop1 ? 'bg-amber-50/20 font-semibold' : ''
+                        }`}
+                      >
+                        <td className="px-4 py-3.5 text-center">
+                          <span
+                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-black shadow-xs ${
+                              isTop1
+                                ? 'bg-amber-400 text-amber-950 ring-2 ring-amber-300'
+                                : isTop2
+                                ? 'bg-slate-300 text-slate-900 ring-2 ring-slate-200'
+                                : isTop3
+                                ? 'bg-orange-300 text-orange-950 ring-2 ring-orange-200'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            {isTop1 ? '👑' : isTop2 ? '🥇' : isTop3 ? '🥈' : item.rankDisplayBangla}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="font-bold text-slate-900">{item.name}</div>
+                          <div className="text-slate-500 text-xs flex items-center gap-2">
+                            <span>{item.phone}</span>
+                            <span className="text-[11px] text-slate-400 font-normal">
+                              ({toBanglaDigits(item.totalOrders)} টি অর্ডার)
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${item.tier.bgClass} ${item.tier.textClass} ${item.tier.borderClass}`}
+                          >
+                            <span>{item.tier.badgeEmoji}</span>
+                            <span>{item.tier.labelBn}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-right font-black text-slate-900">
+                          ৳ {item.totalPurchase.toLocaleString('en-US')}
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className="inline-block bg-[#0A4A29]/10 text-[#0A4A29] px-2.5 py-1 rounded-lg font-black text-xs">
+                            {item.scoreDisplayBangla} পয়েন্ট
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 min-w-[140px]">
+                          {item.nextTier ? (
+                            <div>
+                              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                                <span>{item.nextTier.badgeEmoji} {item.nextTier.labelBn}</span>
+                                <span className="font-bold text-slate-700">{toBanglaDigits(item.progressPercent)}%</span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-gradient-to-r from-amber-500 to-[#1E8A52] h-2 rounded-full transition-all duration-500"
+                                  style={{ width: `${item.progressPercent}%` }}
+                                />
+                              </div>
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                আর ৳ {item.amountToNextTier.toLocaleString('en-US')} প্রয়োজন
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-xs text-purple-700 font-bold">
+                              <span>👑</span>
+                              <span>সর্বোচ্চ স্তর অর্জিত</span>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* General Cashflow Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-4">

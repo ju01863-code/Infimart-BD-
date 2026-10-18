@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   Package,
   Plus,
@@ -13,8 +13,14 @@ import {
   Loader2,
   Check,
   FolderPlus,
+  BellRing,
+  PackageCheck,
+  SlidersHorizontal,
+  Layers,
+  AlertCircle,
+  TrendingDown,
 } from 'lucide-react';
-import { Product, Category } from '../../types';
+import { Product, Category, StoreSettings } from '../../types';
 import { uploadProductImage, compressImage, FALLBACK_PRODUCT_IMAGE } from '../../utils/imageCompressor';
 import { exportToExcel, exportToCSV } from '../../utils/excelExport';
 import { testFirebaseConnection } from '../../firebase';
@@ -23,25 +29,45 @@ import { ConfirmModal } from '../ConfirmModal';
 interface ProductTabProps {
   products: Product[];
   categories: Category[];
+  settings?: StoreSettings;
   onAddProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   onUpdateProduct: (id: string, product: Partial<Product>) => Promise<void>;
   onDeleteProduct: (id: string, imageUrl?: string) => Promise<void>;
   onSeedInitialProducts?: () => Promise<void>;
   onAddCategory?: (category: Omit<Category, 'id'>) => Promise<void>;
+  onUpdateSettings?: (newSettings: Partial<StoreSettings>) => Promise<void>;
 }
 
 export const ProductTab: React.FC<ProductTabProps> = ({
   products,
   categories,
+  settings,
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
   onAddCategory,
+  onUpdateSettings,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('সব');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Restock Threshold & Stock Filter State
+  const [globalThreshold, setGlobalThreshold] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('fenimart_stock_threshold');
+      if (saved && !isNaN(Number(saved))) return Number(saved);
+    }
+    return settings?.defaultLowStockThreshold || 5;
+  });
+
+  const [stockFilter, setStockFilter] = useState<'all' | 'restock' | 'out_of_stock' | 'in_stock'>('all');
+
+  // Quick Restock Modal State
+  const [quickRestockProduct, setQuickRestockProduct] = useState<Product | null>(null);
+  const [quickRestockAmount, setQuickRestockAmount] = useState<number | ''>(10);
+  const [isQuickRestocking, setIsQuickRestocking] = useState(false);
 
   // Quick category creation inside product form
   const [showQuickAddCategory, setShowQuickAddCategory] = useState(false);
@@ -69,6 +95,8 @@ export const ProductTab: React.FC<ProductTabProps> = ({
   const [price, setPrice] = useState<number | ''>('');
   const [unit, setUnit] = useState('কেজি');
   const [stock, setStock] = useState<'In Stock' | 'Low Stock' | 'Out of Stock'>('In Stock');
+  const [stockQuantity, setStockQuantity] = useState<number | ''>('');
+  const [lowStockThreshold, setLowStockThreshold] = useState<number | ''>('');
   const [imageUrl, setImageUrl] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -97,13 +125,73 @@ export const ProductTab: React.FC<ProductTabProps> = ({
     { value: 'বস্তা', label: 'বস্তা (sack)' },
   ];
 
-  const filteredProducts = products.filter((p) => {
-    const matchCat = selectedCategory === 'সব' || p.category === selectedCategory;
-    const matchSearch =
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchCat && matchSearch;
-  });
+  // Restock calculation helpers
+  const getProductThreshold = (p: Product): number => {
+    return typeof p.lowStockThreshold === 'number' && p.lowStockThreshold > 0
+      ? p.lowStockThreshold
+      : globalThreshold;
+  };
+
+  const isOutOfStockProduct = (p: Product): boolean => {
+    if (p.stock === 'Out of Stock') return true;
+    if (typeof p.stockQuantity === 'number') {
+      return p.stockQuantity <= 0;
+    }
+    return false;
+  };
+
+  const isLowStockProduct = (p: Product): boolean => {
+    if (isOutOfStockProduct(p)) return true;
+    if (typeof p.stockQuantity === 'number') {
+      return p.stockQuantity <= getProductThreshold(p);
+    }
+    return p.stock === 'Low Stock';
+  };
+
+  // Restock and healthy counts
+  const restockNeededCount = useMemo(() => {
+    return products.filter(isLowStockProduct).length;
+  }, [products, globalThreshold]);
+
+  const outOfStockCount = useMemo(() => {
+    return products.filter(isOutOfStockProduct).length;
+  }, [products]);
+
+  const inStockCount = useMemo(() => {
+    return products.filter((p) => !isLowStockProduct(p)).length;
+  }, [products, globalThreshold]);
+
+  // Filtered Products
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchCat = selectedCategory === 'সব' || p.category === selectedCategory;
+      const matchSearch =
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category.toLowerCase().includes(searchTerm.toLowerCase());
+
+      let matchStock = true;
+      if (stockFilter === 'restock') {
+        matchStock = isLowStockProduct(p);
+      } else if (stockFilter === 'out_of_stock') {
+        matchStock = isOutOfStockProduct(p);
+      } else if (stockFilter === 'in_stock') {
+        matchStock = !isLowStockProduct(p);
+      }
+
+      return matchCat && matchSearch && matchStock;
+    });
+  }, [products, selectedCategory, searchTerm, stockFilter, globalThreshold]);
+
+  const handleUpdateGlobalThreshold = (newVal: number) => {
+    const validVal = Math.max(1, Math.min(999, newVal));
+    setGlobalThreshold(validVal);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('fenimart_stock_threshold', String(validVal));
+    }
+    if (onUpdateSettings) {
+      onUpdateSettings({ defaultLowStockThreshold: validVal }).catch(() => {});
+    }
+  };
 
   const openAddModal = () => {
     setEditingProduct(null);
@@ -113,6 +201,8 @@ export const ProductTab: React.FC<ProductTabProps> = ({
     setPrice('');
     setUnit('কেজি');
     setStock('In Stock');
+    setStockQuantity('');
+    setLowStockThreshold('');
     setImageUrl('');
     setPreviewUrl('');
     setSelectedFile(null);
@@ -130,6 +220,8 @@ export const ProductTab: React.FC<ProductTabProps> = ({
     setPrice(prod.price);
     setUnit(prod.unit);
     setStock(prod.stock);
+    setStockQuantity(prod.stockQuantity !== undefined ? prod.stockQuantity : '');
+    setLowStockThreshold(prod.lowStockThreshold !== undefined ? prod.lowStockThreshold : '');
 
     const existingImg = typeof prod.image === 'string' ? prod.image : FALLBACK_PRODUCT_IMAGE;
 
@@ -227,12 +319,27 @@ export const ProductTab: React.FC<ProductTabProps> = ({
 
       const chosenCategory = category || (categories[0]?.name ?? 'মুদি পণ্য');
 
+      let resolvedStock = stock;
+      if (stockQuantity !== '') {
+        const qty = Number(stockQuantity);
+        const thresh = lowStockThreshold !== '' ? Number(lowStockThreshold) : globalThreshold;
+        if (qty <= 0) {
+          resolvedStock = 'Out of Stock';
+        } else if (qty <= thresh) {
+          resolvedStock = 'Low Stock';
+        } else {
+          resolvedStock = 'In Stock';
+        }
+      }
+
       const productPayload: Omit<Product, 'id'> = {
         name: name.trim(),
         category: chosenCategory,
         price: Number(price),
         unit,
-        stock,
+        stock: resolvedStock,
+        stockQuantity: stockQuantity === '' ? undefined : Number(stockQuantity),
+        lowStockThreshold: lowStockThreshold === '' ? undefined : Number(lowStockThreshold),
         image: finalImageUrl,
         createdAt: editingProduct?.createdAt || new Date().toISOString(),
       };
@@ -252,6 +359,41 @@ export const ProductTab: React.FC<ProductTabProps> = ({
       setModalError('কিছু ভুল হয়েছে। আবার চেষ্টা করুন।');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleQuickRestockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickRestockProduct?.id) return;
+    const addQty = Number(quickRestockAmount);
+    if (isNaN(addQty) || addQty <= 0) {
+      alert('সঠিক সংখ্যা লিখুন (যেমন: ৫, ১০, ২০)');
+      return;
+    }
+
+    try {
+      setIsQuickRestocking(true);
+      const currentQty = typeof quickRestockProduct.stockQuantity === 'number' ? quickRestockProduct.stockQuantity : 0;
+      const newStockQuantity = currentQty + addQty;
+      const threshold = getProductThreshold(quickRestockProduct);
+      const newStockStatus: 'In Stock' | 'Low Stock' | 'Out of Stock' =
+        newStockQuantity <= 0 ? 'Out of Stock' : newStockQuantity <= threshold ? 'Low Stock' : 'In Stock';
+
+      await onUpdateProduct(quickRestockProduct.id, {
+        stockQuantity: newStockQuantity,
+        stock: newStockStatus,
+      });
+
+      setSuccessMessage(`${quickRestockProduct.name} সফলভাবে রিস্টক করা হয়েছে! নতুন মজুদ: ${newStockQuantity} ${quickRestockProduct.unit}`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+      setQuickRestockProduct(null);
+      setQuickRestockAmount(10);
+    } catch (err) {
+      console.error('Quick restock error:', err);
+      setErrorMessage('রিস্টক আপডেট করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+      setTimeout(() => setErrorMessage(null), 4000);
+    } finally {
+      setIsQuickRestocking(false);
     }
   };
 
@@ -368,6 +510,137 @@ export const ProductTab: React.FC<ProductTabProps> = ({
         </div>
       </div>
 
+      {/* Restock Tracker & Stock Threshold Controls */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-amber-50 to-emerald-500/10 border-2 border-amber-300 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 bg-amber-500 text-white rounded-xl shadow-xs">
+                <AlertTriangle className="w-4 h-4" />
+              </span>
+              <h3 className="font-black text-slate-900 text-base sm:text-lg">
+                ইনভেন্টরি রিস্টক ট্র্যাকার ও থ্রেশহোল্ড (Low Stock Alert)
+              </h3>
+            </div>
+            <p className="text-xs text-slate-600">
+              পণ্যের স্টক নির্ধারিত থ্রেশহোল্ড (<span className="font-bold text-amber-900">{globalThreshold}</span> টি)-এর নিচে নামলে তালিকায় স্বয়ংক্রিয়ভাবে হলুদ ও লাল রঙে হাইলাইট হবে।
+            </p>
+          </div>
+
+          {/* Threshold Stepper & Presets */}
+          <div className="flex flex-wrap items-center gap-2.5 bg-white/95 px-3.5 py-2 rounded-xl border border-amber-200 shadow-2xs self-start lg:self-auto">
+            <span className="text-xs font-bold text-slate-700 whitespace-nowrap flex items-center gap-1">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-amber-600" />
+              <span>অ্যালার্ট থ্রেশহোল্ড:</span>
+            </span>
+            <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden bg-white shadow-2xs">
+              <button
+                type="button"
+                onClick={() => handleUpdateGlobalThreshold(globalThreshold - 1)}
+                className="px-2.5 py-1 text-slate-600 hover:bg-slate-100 font-bold text-sm cursor-pointer border-r border-slate-200"
+                title="১ কমান"
+              >
+                -
+              </button>
+              <input
+                type="number"
+                min="1"
+                max="999"
+                value={globalThreshold}
+                onChange={(e) => handleUpdateGlobalThreshold(Number(e.target.value) || 1)}
+                className="w-12 text-center text-sm font-black text-slate-900 focus:outline-none py-1"
+              />
+              <button
+                type="button"
+                onClick={() => handleUpdateGlobalThreshold(globalThreshold + 1)}
+                className="px-2.5 py-1 text-slate-600 hover:bg-slate-100 font-bold text-sm cursor-pointer border-l border-slate-200"
+                title="১ বাড়ান"
+              >
+                +
+              </button>
+            </div>
+            <div className="flex items-center gap-1">
+              {[3, 5, 10, 15].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => handleUpdateGlobalThreshold(preset)}
+                  className={`px-2 py-0.5 rounded text-xs font-bold transition cursor-pointer ${
+                    globalThreshold === preset
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-amber-100'
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Stock Status Pills & Restock Quick Filters */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-200/60">
+          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">স্টক ফিল্টার:</span>
+          
+          <button
+            type="button"
+            onClick={() => setStockFilter('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              stockFilter === 'all'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <span>সব পণ্য</span>
+            <span className="opacity-75">({products.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStockFilter('restock')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              stockFilter === 'restock'
+                ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-300'
+                : 'bg-amber-100/90 text-amber-900 hover:bg-amber-200/90 border border-amber-300'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+            <span>⚠️ রিস্টক প্রয়োজন (হাইলাইটেড)</span>
+            <span className="px-1.5 py-0.2 bg-amber-700 text-white rounded-full text-[10px]">
+              {restockNeededCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStockFilter('out_of_stock')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              stockFilter === 'out_of_stock'
+                ? 'bg-rose-600 text-white shadow-xs ring-2 ring-rose-300'
+                : 'bg-rose-100/90 text-rose-900 hover:bg-rose-200/90 border border-rose-300'
+            }`}
+          >
+            <span>❌ স্টক শেষ</span>
+            <span className="px-1.5 py-0.2 bg-rose-700 text-white rounded-full text-[10px]">
+              {outOfStockCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStockFilter('in_stock')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              stockFilter === 'in_stock'
+                ? 'bg-emerald-700 text-white shadow-xs'
+                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+            }`}
+          >
+            <span>✅ পর্যাপ্ত মজুদ</span>
+            <span className="opacity-75">({inStockCount})</span>
+          </button>
+        </div>
+      </div>
+
       {/* Search and Category Filter Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="w-full md:w-80 relative">
@@ -426,7 +699,7 @@ export const ProductTab: React.FC<ProductTabProps> = ({
                 <th className="px-4 py-3.5">পণ্যের নাম</th>
                 <th className="px-4 py-3.5">ক্যাটাগরি</th>
                 <th className="px-4 py-3.5">মূল্য (টাকা)</th>
-                <th className="px-4 py-3.5">একক</th>
+                <th className="px-4 py-3.5">স্টক মজুদ / থ্রেশহোল্ড</th>
                 <th className="px-4 py-3.5">স্টক অবস্থা</th>
                 <th className="px-4 py-3.5 text-right">অ্যাকশন</th>
               </tr>
@@ -437,17 +710,30 @@ export const ProductTab: React.FC<ProductTabProps> = ({
                   <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
                     <div className="max-w-xs mx-auto space-y-2">
                       <Package className="w-12 h-12 text-slate-300 mx-auto" />
-                      <p className="font-bold text-slate-700">এখনো কোনো পণ্য যোগ করা হয়নি।</p>
-                      <p className="text-xs text-slate-400">নতুন পণ্য যোগ করতে উপরের বাটনে ক্লিক করুন।</p>
+                      <p className="font-bold text-slate-700">কোনো পণ্য পাওয়া যায়নি।</p>
+                      <p className="text-xs text-slate-400">ফিল্টার পরিবর্তন করুন অথবা নতুন পণ্য যোগ করুন।</p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 filteredProducts.map((prod) => {
                   const displayImg = typeof prod.image === 'string' ? prod.image : FALLBACK_PRODUCT_IMAGE;
+                  const threshold = getProductThreshold(prod);
+                  const isOut = isOutOfStockProduct(prod);
+                  const isLow = isLowStockProduct(prod);
+                  const hasQty = typeof prod.stockQuantity === 'number';
 
                   return (
-                    <tr key={prod.id} className="hover:bg-slate-50 transition">
+                    <tr
+                      key={prod.id}
+                      className={`transition ${
+                        isOut
+                          ? 'bg-rose-50/90 hover:bg-rose-100/90 border-l-4 border-rose-500'
+                          : isLow
+                          ? 'bg-amber-50/90 hover:bg-amber-100/90 border-l-4 border-amber-500'
+                          : 'hover:bg-slate-50 border-l-4 border-transparent'
+                      }`}
+                    >
                       <td className="px-4 py-3">
                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                           <img
@@ -461,7 +747,18 @@ export const ProductTab: React.FC<ProductTabProps> = ({
                           />
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-bold text-slate-900 text-base">{prod.name}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-bold text-slate-900 text-base">{prod.name}</div>
+                        {isOut ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-100/90 px-2 py-0.5 rounded-md mt-1 border border-rose-300">
+                            <AlertCircle className="w-3 h-3" /> স্টক শূন্য — জরুরি রিস্টক প্রয়োজন!
+                          </span>
+                        ) : isLow ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-md mt-1 border border-amber-300">
+                            <AlertTriangle className="w-3 h-3 text-amber-600" /> থ্রেশহোল্ড সতর্কতা: মজুদ {hasQty ? prod.stockQuantity : 0} ≤ {threshold}
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-3">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
                           {prod.category}
@@ -470,31 +767,63 @@ export const ProductTab: React.FC<ProductTabProps> = ({
                       <td className="px-4 py-3 font-black text-[#0A4A29] text-base whitespace-nowrap">
                         ৳ {prod.price.toLocaleString('en-US')} <span className="text-xs text-slate-500 font-medium">/ {prod.unit}</span>
                       </td>
-                      <td className="px-4 py-3 text-slate-600 font-medium">{prod.unit}</td>
+                      <td className="px-4 py-3">
+                        <div className="space-y-0.5">
+                          <div className={`font-black text-sm flex items-center gap-1 ${isOut ? 'text-rose-600' : isLow ? 'text-amber-800' : 'text-slate-800'}`}>
+                            <span>{hasQty ? `${prod.stockQuantity} ${prod.unit}` : 'অনির্দিষ্ট'}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            থ্রেশহোল্ড: <span className="font-semibold text-slate-600">{threshold}</span>
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                            prod.stock === 'In Stock'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : prod.stock === 'Low Stock'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-rose-100 text-rose-800'
+                            isOut
+                              ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                              : isLow
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                           }`}
                         >
-                          {prod.stock === 'In Stock' ? (
-                            <CheckCircle className="w-3 h-3" />
+                          {isOut ? (
+                            <>
+                              <AlertCircle className="w-3 h-3 text-rose-600" />
+                              <span>স্টক শেষ</span>
+                            </>
+                          ) : isLow ? (
+                            <>
+                              <AlertTriangle className="w-3 h-3 text-amber-600" />
+                              <span>সীমিত স্টক (রিস্টক)</span>
+                            </>
                           ) : (
-                            <AlertTriangle className="w-3 h-3" />
+                            <>
+                              <CheckCircle className="w-3 h-3 text-emerald-600" />
+                              <span>পর্যাপ্ত স্টক</span>
+                            </>
                           )}
-                          {prod.stock === 'In Stock'
-                            ? 'স্টকে আছে'
-                            : prod.stock === 'Low Stock'
-                            ? 'সীমিত স্টক'
-                            : 'স্টক শেষ'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Quick Restock Action Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickRestockProduct(prod);
+                              setQuickRestockAmount(10);
+                            }}
+                            className={`p-1.5 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
+                              isLow || isOut
+                                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                            }`}
+                            title="দ্রুত রিস্টক করুন"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>রিস্টক</span>
+                          </button>
                           <button
                             onClick={() => openEditModal(prod)}
                             className="p-1.5 text-slate-600 hover:text-[#0A4A29] hover:bg-slate-100 rounded-lg transition cursor-pointer"
@@ -523,14 +852,48 @@ export const ProductTab: React.FC<ProductTabProps> = ({
         <div className="md:hidden divide-y divide-slate-100">
           {filteredProducts.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-sm">
-              এখনো কোনো পণ্য যোগ করা হয়নি।
+              কোনো পণ্য পাওয়া যায়নি।
             </div>
           ) : (
             filteredProducts.map((prod) => {
               const displayImg = typeof prod.image === 'string' ? prod.image : FALLBACK_PRODUCT_IMAGE;
+              const threshold = getProductThreshold(prod);
+              const isOut = isOutOfStockProduct(prod);
+              const isLow = isLowStockProduct(prod);
+              const hasQty = typeof prod.stockQuantity === 'number';
 
               return (
-                <div key={prod.id} className="p-4 space-y-3 relative">
+                <div
+                  key={prod.id}
+                  className={`p-4 space-y-3 relative transition ${
+                    isOut
+                      ? 'bg-rose-50/80 border-l-4 border-rose-500'
+                      : isLow
+                      ? 'bg-amber-50/80 border-l-4 border-amber-500'
+                      : 'bg-white'
+                  }`}
+                >
+                  {/* Top Restock Warning Pill on Mobile */}
+                  {(isOut || isLow) && (
+                    <div className="flex items-center justify-between pb-2 border-b border-amber-200/80 text-xs">
+                      <span className={`font-black flex items-center gap-1 ${isOut ? 'text-rose-700' : 'text-amber-800'}`}>
+                        {isOut ? <AlertCircle className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />}
+                        {isOut ? 'স্টক শেষ — জরুরি রিস্টক প্রয়োজন!' : '⚠️ রিস্টক সতর্কতা: সীমিত স্টক'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuickRestockProduct(prod);
+                          setQuickRestockAmount(10);
+                        }}
+                        className="bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-lg font-bold text-xs flex items-center gap-1 shadow-xs cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>+ রিস্টক</span>
+                      </button>
+                    </div>
+                  )}
+
                   {/* Top-Right Edit / Delete Action Icons (48px Touch Targets) */}
                   <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
                     <button
@@ -574,19 +937,28 @@ export const ProductTab: React.FC<ProductTabProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-500 font-medium">মজুদ:</span>
+                      <span className={`font-black ${isOut ? 'text-rose-600' : isLow ? 'text-amber-800' : 'text-slate-800'}`}>
+                        {hasQty ? `${prod.stockQuantity} ${prod.unit}` : 'অনির্দিষ্ট'}
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        (থ্রেশহোল্ড: {threshold})
+                      </span>
+                    </div>
+
                     <span
                       className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
-                        prod.stock === 'In Stock'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : prod.stock === 'Low Stock'
+                        isOut
+                          ? 'bg-rose-100 text-rose-800'
+                          : isLow
                           ? 'bg-amber-100 text-amber-800'
-                          : 'bg-rose-100 text-rose-800'
+                          : 'bg-emerald-100 text-emerald-800'
                       }`}
                     >
-                      {prod.stock === 'In Stock' ? '✓ স্টকে আছে' : prod.stock === 'Low Stock' ? '⚠ সীমিত স্টক' : '✕ স্টক শেষ'}
+                      {isOut ? '✕ স্টক শেষ' : isLow ? '⚠ সীমিত স্টক' : '✓ স্টকে আছে'}
                     </span>
-                    <span className="text-xs text-slate-400 font-mono">আইডি: {prod.id ? `#${prod.id.slice(-4).toUpperCase()}` : ''}</span>
                   </div>
                 </div>
               );
@@ -769,10 +1141,67 @@ export const ProductTab: React.FC<ProductTabProps> = ({
                 </div>
               )}
 
+              {/* Stock Quantity & Restock Threshold */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span>বর্তমান মজুদ পরিমাণ (Stock Qty)</span>
+                    <span className="text-xs text-slate-400 font-normal">সংখ্যা লিখুন</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="যেমন: ২৫"
+                      value={stockQuantity}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? '' : Number(e.target.value);
+                        setStockQuantity(val);
+                        if (val !== '') {
+                          const thresh = lowStockThreshold !== '' ? Number(lowStockThreshold) : globalThreshold;
+                          if (Number(val) <= 0) setStock('Out of Stock');
+                          else if (Number(val) <= thresh) setStock('Low Stock');
+                          else setStock('In Stock');
+                        }
+                      }}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-[#1E8A52] min-h-[48px]"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                      {unit}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span>রিস্টক থ্রেশহোল্ড (Threshold)</span>
+                    <span className="text-xs text-amber-700 font-semibold">ডিফল্ট: {globalThreshold}</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder={`ডিফল্ট (${globalThreshold})`}
+                    value={lowStockThreshold}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? '' : Number(e.target.value);
+                      setLowStockThreshold(val);
+                      if (stockQuantity !== '') {
+                        const thresh = val !== '' ? Number(val) : globalThreshold;
+                        const qty = Number(stockQuantity);
+                        if (qty <= 0) setStock('Out of Stock');
+                        else if (qty <= thresh) setStock('Low Stock');
+                        else setStock('In Stock');
+                      }
+                    }}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-[#1E8A52] min-h-[48px]"
+                  />
+                </div>
+              </div>
+
               {/* Stock Status */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">
-                  স্টক অবস্থা
+                  স্টক অবস্থা (Stock Status)
                 </label>
                 <select
                   value={stock}
@@ -782,7 +1211,7 @@ export const ProductTab: React.FC<ProductTabProps> = ({
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-[#1E8A52] min-h-[48px] bg-white font-medium"
                 >
                   <option value="In Stock">স্টকে আছে (In Stock)</option>
-                  <option value="Low Stock">সীমিত স্টক (Low Stock)</option>
+                  <option value="Low Stock">সীমিত স্টক — রিস্টক প্রয়োজন (Low Stock)</option>
                   <option value="Out of Stock">স্টক শেষ (Out of Stock)</option>
                 </select>
               </div>
@@ -877,6 +1306,121 @@ export const ProductTab: React.FC<ProductTabProps> = ({
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Restock Modal */}
+      {quickRestockProduct && (
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-amber-200 overflow-hidden animate-fadeIn">
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-[#FFE0A8]" />
+                <h3 className="font-black text-base">দ্রুত রিস্টক (Quick Restock)</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickRestockProduct(null)}
+                className="text-white/80 hover:text-white p-1 rounded-full cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickRestockSubmit} className="p-5 space-y-4">
+              <div>
+                <p className="text-xs text-slate-500 font-semibold">পণ্য:</p>
+                <h4 className="text-base font-black text-slate-900">{quickRestockProduct.name}</h4>
+                <div className="flex items-center gap-3 mt-1 text-xs">
+                  <span className="text-slate-600">
+                    বর্তমান মজুদ:{' '}
+                    <span className="font-bold text-slate-900">
+                      {typeof quickRestockProduct.stockQuantity === 'number'
+                        ? quickRestockProduct.stockQuantity
+                        : 0}{' '}
+                      {quickRestockProduct.unit}
+                    </span>
+                  </span>
+                  <span className="text-slate-400">|</span>
+                  <span className="text-amber-700 font-semibold">
+                    থ্রেশহোল্ড: {getProductThreshold(quickRestockProduct)}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  কত পরিমাণ যোগ করবেন? ({quickRestockProduct.unit})
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={quickRestockAmount}
+                  onChange={(e) =>
+                    setQuickRestockAmount(e.target.value === '' ? '' : Number(e.target.value))
+                  }
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[48px]"
+                  placeholder="যেমন: ১০"
+                />
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="flex items-center gap-2">
+                {[5, 10, 20, 50, 100].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setQuickRestockAmount(amt)}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                      quickRestockAmount === amt
+                        ? 'bg-amber-600 text-white border-amber-600'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-amber-50'
+                    }`}
+                  >
+                    +{amt}
+                  </button>
+                ))}
+              </div>
+
+              {/* Preview */}
+              {quickRestockAmount !== '' && Number(quickRestockAmount) > 0 && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs flex items-center justify-between">
+                  <span className="text-emerald-800 font-medium">রিস্টকের পর মোট মজুদ হবে:</span>
+                  <span className="font-black text-[#0A4A29] text-sm">
+                    {(typeof quickRestockProduct.stockQuantity === 'number'
+                      ? quickRestockProduct.stockQuantity
+                      : 0) + Number(quickRestockAmount)}{' '}
+                    {quickRestockProduct.unit}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setQuickRestockProduct(null)}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 transition cursor-pointer min-h-[44px]"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={isQuickRestocking}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm min-h-[44px] disabled:opacity-50"
+                >
+                  {isQuickRestocking ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>রিস্টক নিশ্চিত করুন</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Users,
   Search,
@@ -15,10 +15,25 @@ import {
   CheckCircle,
   AlertTriangle,
   Globe,
+  Crown,
+  Trophy,
+  Medal,
+  Award,
+  Star,
+  ArrowUpDown,
+  Sparkles,
+  DollarSign,
 } from 'lucide-react';
 import { Customer, Order } from '../../types';
 import { exportToExcel, exportToCSV } from '../../utils/excelExport';
 import { ConfirmModal } from '../ConfirmModal';
+import {
+  calculateAllCustomerLoyalties,
+  toBanglaDigits,
+  LOYALTY_TIERS,
+  LoyaltyTierKey,
+  CustomerLoyaltyRankInfo,
+} from '../../utils/loyalty';
 
 interface CustomerTabProps {
   customers: Customer[];
@@ -37,11 +52,30 @@ export const CustomerTab: React.FC<CustomerTabProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [customerTypeFilter, setCustomerTypeFilter] = useState<'all' | 'local' | 'expat'>('all');
+  const [loyaltyTierFilter, setLoyaltyTierFilter] = useState<'all' | LoyaltyTierKey>('all');
+  const [sortBy, setSortBy] = useState<'loyalty_rank' | 'orders_desc' | 'name_asc' | 'purchase_asc'>('loyalty_rank');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [selectedCustomerForHistory, setSelectedCustomerForHistory] = useState<Customer | null>(null);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Compute loyalty score, ranking, and tiers for all customers
+  const loyaltyData = useMemo(() => {
+    return calculateAllCustomerLoyalties(customers, orders);
+  }, [customers, orders]);
+
+  // Helper to retrieve customer's loyalty rank and score
+  const getCustomerLoyalty = (c: Customer): CustomerLoyaltyRankInfo | undefined => {
+    const clean = (c.phone || '').replace(/[^0-9]/g, '');
+    if (clean && loyaltyData.rankMapByPhone.has(clean)) {
+      return loyaltyData.rankMapByPhone.get(clean);
+    }
+    if (c.id && loyaltyData.rankMapById.has(c.id)) {
+      return loyaltyData.rankMapById.get(c.id);
+    }
+    return undefined;
+  };
 
   // Notifications
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -64,23 +98,56 @@ export const CustomerTab: React.FC<CustomerTabProps> = ({
     expat: customers.filter((c) => c.customerType === 'expat').length,
   };
 
-  const filteredCustomers = customers.filter((c) => {
-    // Customer Type Filter: 'all' | 'local' | 'expat'
-    if (customerTypeFilter === 'local' && c.customerType === 'expat') {
-      return false;
-    }
-    if (customerTypeFilter === 'expat' && c.customerType !== 'expat') {
-      return false;
-    }
+  const filteredCustomers = useMemo(() => {
+    const result = customers.filter((c) => {
+      // Customer Type Filter: 'all' | 'local' | 'expat'
+      if (customerTypeFilter === 'local' && c.customerType === 'expat') {
+        return false;
+      }
+      if (customerTypeFilter === 'expat' && c.customerType !== 'expat') {
+        return false;
+      }
 
-    const s = searchTerm.toLowerCase();
-    const nameMatch = c.name.toLowerCase().includes(s);
-    const phoneMatch = c.phone.includes(searchTerm);
-    const addressMatch = (c.address || '').toLowerCase().includes(s);
-    const countryMatch = (c.country || '').toLowerCase().includes(s);
+      // Loyalty Tier Filter: 'all' | 'platinum' | 'gold' | 'silver' | 'bronze' | 'starter'
+      const loyalty = getCustomerLoyalty(c);
+      if (loyaltyTierFilter !== 'all' && loyalty && loyalty.tier.key !== loyaltyTierFilter) {
+        return false;
+      }
 
-    return nameMatch || phoneMatch || addressMatch || countryMatch;
-  });
+      const s = searchTerm.toLowerCase();
+      const nameMatch = c.name.toLowerCase().includes(s);
+      const phoneMatch = c.phone.includes(searchTerm);
+      const addressMatch = (c.address || '').toLowerCase().includes(s);
+      const countryMatch = (c.country || '').toLowerCase().includes(s);
+      const tierMatch = loyalty ? loyalty.tier.labelBn.toLowerCase().includes(s) || loyalty.tier.labelEn.toLowerCase().includes(s) : false;
+
+      return nameMatch || phoneMatch || addressMatch || countryMatch || tierMatch;
+    });
+
+    // Apply sorting
+    result.sort((a, b) => {
+      const loyA = getCustomerLoyalty(a);
+      const loyB = getCustomerLoyalty(b);
+
+      if (sortBy === 'loyalty_rank') {
+        const rankA = loyA?.rank ?? 99999;
+        const rankB = loyB?.rank ?? 99999;
+        return rankA - rankB;
+      }
+      if (sortBy === 'orders_desc') {
+        return (Number(b.totalOrders || 0)) - (Number(a.totalOrders || 0));
+      }
+      if (sortBy === 'purchase_asc') {
+        return (Number(a.totalPurchase || 0)) - (Number(b.totalPurchase || 0));
+      }
+      if (sortBy === 'name_asc') {
+        return a.name.localeCompare(b.name, 'bn');
+      }
+      return 0;
+    });
+
+    return result;
+  }, [customers, customerTypeFilter, loyaltyTierFilter, searchTerm, sortBy, loyaltyData]);
 
   const openAddModal = () => {
     setEditingCustomer(null);
@@ -165,19 +232,25 @@ export const CustomerTab: React.FC<CustomerTabProps> = ({
   };
 
   const handleExport = (format: 'xlsx' | 'csv') => {
-    const data = filteredCustomers.map((c, idx) => ({
-      ক্রমিক: idx + 1,
-      কাস্টমার_নাম: c.name,
-      মোবাইল: c.phone,
-      ধরন: c.customerType === 'expat' ? 'প্রবাসী' : 'দেশি',
-      দেশ: c.country || (c.customerType === 'expat' ? 'প্রবাসী' : 'বাংলাদেশ'),
-      ঠিকানা: c.address,
-      প্রথম_অর্ডার_তারিখ: c.firstOrder,
-      সর্বশেষ_অর্ডার_তারিখ: c.lastOrder,
-      মোট_অর্ডার_সংখ্যা: c.totalOrders,
-      মোট_ক্রয়_টাকা: c.totalPurchase,
-      উপহার_স্ট্যাটাস: c.giftStatus === 'Sent' ? 'পাঠানো হয়েছে' : 'পাঠানো হয়নি',
-    }));
+    const data = filteredCustomers.map((c, idx) => {
+      const loyalty = getCustomerLoyalty(c);
+      return {
+        ক্রমিক: idx + 1,
+        লয়ালটি_র‍্যাঙ্ক: loyalty ? loyalty.rankDisplayBangla : `#${idx + 1}`,
+        লয়ালটি_স্কোর: loyalty ? loyalty.score : 0,
+        লয়ালটি_স্তর: loyalty ? `${loyalty.tier.badgeEmoji} ${loyalty.tier.labelBn}` : 'সাধারণ',
+        কাস্টমার_নাম: c.name,
+        মোবাইল: c.phone,
+        ধরন: c.customerType === 'expat' ? 'প্রবাসী' : 'দেশি',
+        দেশ: c.country || (c.customerType === 'expat' ? 'প্রবাসী' : 'বাংলাদেশ'),
+        ঠিকানা: c.address,
+        প্রথম_অর্ডার_তারিখ: c.firstOrder,
+        সর্বশেষ_অর্ডার_তারিখ: c.lastOrder,
+        মোট_অর্ডার_সংখ্যা: c.totalOrders,
+        মোট_ক্রয়_টাকা: c.totalPurchase,
+        উপহার_স্ট্যাটাস: c.giftStatus === 'Sent' ? 'পাঠানো হয়েছে' : 'পাঠানো হয়নি',
+      };
+    });
 
     const dateStr = new Date().toISOString().split('T')[0];
     if (format === 'xlsx') {
@@ -228,12 +301,18 @@ export const CustomerTab: React.FC<CustomerTabProps> = ({
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div>
-          <h2 className="text-xl sm:text-2xl font-black text-[#0A4A29] flex items-center gap-2">
-            <Users className="w-6 h-6 text-[#1E8A52]" />
-            <span>কাস্টমার ডাটাবেজ (Customer Database)</span>
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-black text-[#0A4A29] flex items-center gap-2">
+              <Users className="w-6 h-6 text-[#1E8A52]" />
+              <span>কাস্টমার ডাটাবেজ ও লয়ালটি র‍্যাংকিং</span>
+            </h2>
+            <span className="bg-amber-100 text-amber-900 text-xs px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+              <Crown className="w-3.5 h-3.5 text-amber-600" />
+              <span>ভিআইপি র‍্যাঙ্ক</span>
+            </span>
+          </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            মোট নিবন্ধিত কাস্টমার: <span className="font-bold text-slate-800">{customers.length}</span> জন
+            মোট নিবন্ধিত কাস্টমার: <span className="font-bold text-slate-800">{toBanglaDigits(customers.length)}</span> জন | মোট ক্রয় ভলিউমের ভিত্তিতে লয়ালটি স্কোর ও স্তর নির্ধারিত
           </p>
         </div>
 
@@ -241,6 +320,7 @@ export const CustomerTab: React.FC<CustomerTabProps> = ({
           <button
             onClick={() => handleExport('xlsx')}
             className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition border border-slate-300 min-h-[44px]"
+            title="লয়ালটি র‍্যাঙ্ক সহ এক্সেল ডাউনলোড"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Excel</span>
@@ -262,66 +342,222 @@ export const CustomerTab: React.FC<CustomerTabProps> = ({
         </div>
       </div>
 
-      {/* Origin Filter Tabs & Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-        {/* Customer Origin Filter Tabs: All, Bangladeshi, Expat */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none snap-x">
-          <button
-            type="button"
-            onClick={() => setCustomerTypeFilter('all')}
-            className={`min-h-[44px] px-4 py-2 rounded-2xl font-black text-xs sm:text-sm transition flex items-center gap-2 cursor-pointer shrink-0 ${
-              customerTypeFilter === 'all'
-                ? 'bg-[#0A4A29] text-white shadow-md'
-                : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            <span>🔵 সব কাস্টমার</span>
-            <span className="bg-black/15 text-inherit px-2 py-0.5 rounded-full text-xs font-bold">
-              {typeCounts.all}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCustomerTypeFilter('local')}
-            className={`min-h-[44px] px-4 py-2 rounded-2xl font-black text-xs sm:text-sm transition flex items-center gap-2 cursor-pointer shrink-0 ${
-              customerTypeFilter === 'local'
-                ? 'bg-emerald-700 text-white shadow-md'
-                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
-            }`}
-          >
-            <span>🇧🇩 দেশি কাস্টমার</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${customerTypeFilter === 'local' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-900'}`}>
-              {typeCounts.local}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCustomerTypeFilter('expat')}
-            className={`min-h-[44px] px-4 py-2 rounded-2xl font-black text-xs sm:text-sm transition flex items-center gap-2 cursor-pointer shrink-0 ${
-              customerTypeFilter === 'expat'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200'
-            }`}
-          >
-            <span>🌍 প্রবাসী কাস্টমার</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${customerTypeFilter === 'expat' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-900'}`}>
-              {typeCounts.expat}
-            </span>
-          </button>
+      {/* Loyalty & Database KPI Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs text-slate-500 font-bold">মোট কাস্টমার</span>
+            <Users className="w-4 h-4 text-[#1E8A52]" />
+          </div>
+          <h4 className="text-2xl font-black text-slate-800">
+            {toBanglaDigits(customers.length)} <span className="text-xs font-medium text-slate-400">জন</span>
+          </h4>
+          <span className="text-[11px] text-slate-400">ডাটাবেজে সংরক্ষিত</span>
         </div>
 
-        {/* Search Input */}
-        <div className="relative max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="নাম, ফোন নম্বর, দেশ বা ঠিকানা সার্চ করুন..."
-            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-[#1E8A52]"
-          />
+        <div className="bg-white p-4 rounded-2xl border border-purple-200 shadow-sm">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs text-purple-700 font-bold">ভিআইপি গ্রাহক (টপ)</span>
+            <Crown className="w-4 h-4 text-purple-600" />
+          </div>
+          <h4 className="text-2xl font-black text-purple-900">
+            {toBanglaDigits(loyaltyData.summary.vipCount)} <span className="text-xs font-medium text-purple-600">জন</span>
+          </h4>
+          <span className="text-[11px] text-purple-600 font-medium">প্ল্যাটিনাম + গোল্ড টিয়ার</span>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-emerald-200 shadow-sm">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs text-emerald-700 font-bold">মোট ক্রয় ভলিউম</span>
+            <DollarSign className="w-4 h-4 text-emerald-600" />
+          </div>
+          <h4 className="text-xl sm:text-2xl font-black text-emerald-900">
+            ৳ {loyaltyData.summary.totalPurchaseVolume.toLocaleString('en-US')}
+          </h4>
+          <span className="text-[11px] text-emerald-600 font-medium">সর্বমোট গ্রাহক রাজস্ব</span>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-amber-200 shadow-sm">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs text-amber-700 font-bold">গড় লয়ালটি স্কোর</span>
+            <Star className="w-4 h-4 text-amber-600" />
+          </div>
+          <h4 className="text-2xl font-black text-amber-900">
+            {toBanglaDigits(loyaltyData.summary.averageScore)} <span className="text-xs font-medium text-amber-600">পয়েন্ট</span>
+          </h4>
+          <span className="text-[11px] text-amber-600 font-medium">৳১০০ = ১ পয়েন্ট + বোনাস</span>
+        </div>
+      </div>
+
+      {/* Filter Tabs, Loyalty Tier Pills, Sort & Search Bar */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        {/* Row 1: Origin Filters & Sort Selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Customer Origin Filter Tabs: All, Bangladeshi, Expat */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none snap-x">
+            <button
+              type="button"
+              onClick={() => setCustomerTypeFilter('all')}
+              className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-black text-xs transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                customerTypeFilter === 'all'
+                  ? 'bg-[#0A4A29] text-white shadow-sm'
+                  : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <span>🔵 সব কাস্টমার</span>
+              <span className="bg-black/15 text-inherit px-2 py-0.5 rounded-full text-[11px] font-bold">
+                {toBanglaDigits(typeCounts.all)}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCustomerTypeFilter('local')}
+              className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-black text-xs transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                customerTypeFilter === 'local'
+                  ? 'bg-emerald-700 text-white shadow-sm'
+                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+              }`}
+            >
+              <span>🇧🇩 দেশি কাস্টমার</span>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${customerTypeFilter === 'local' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-900'}`}>
+                {toBanglaDigits(typeCounts.local)}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCustomerTypeFilter('expat')}
+              className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-black text-xs transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                customerTypeFilter === 'expat'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200'
+              }`}
+            >
+              <span>🌍 প্রবাসী কাস্টমার</span>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${customerTypeFilter === 'expat' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-900'}`}>
+                {toBanglaDigits(typeCounts.expat)}
+              </span>
+            </button>
+          </div>
+
+          {/* Sort Selector */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs text-slate-500 font-bold flex items-center gap-1">
+              <ArrowUpDown className="w-3.5 h-3.5" />
+              <span>সাজান:</span>
+            </span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1E8A52] cursor-pointer"
+            >
+              <option value="loyalty_rank">👑 লয়ালটি র‍্যাঙ্ক (#১ থেকে)</option>
+              <option value="orders_desc">📦 সর্বাধিক অর্ডার সংখ্যা</option>
+              <option value="name_asc">🔤 নামানুসারে (A-Z)</option>
+              <option value="purchase_asc">💰 সর্বনিম্ন ক্রয় প্রথমে</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Row 2: Loyalty Tier Pills & Search Box */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <span className="text-xs font-bold text-slate-500 mr-1 shrink-0">লয়ালটি স্তর:</span>
+            <button
+              type="button"
+              onClick={() => setLoyaltyTierFilter('all')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition shrink-0 cursor-pointer ${
+                loyaltyTierFilter === 'all'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              সব স্তর ({toBanglaDigits(customers.length)})
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoyaltyTierFilter('platinum')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1 ${
+                loyaltyTierFilter === 'platinum'
+                  ? 'bg-purple-700 text-white shadow-xs'
+                  : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
+              }`}
+            >
+              <span>👑 প্ল্যাটিনাম (৳২০k+)</span>
+              <span className="bg-purple-200/60 px-1.5 py-0.2 rounded-full text-[10px]">
+                {toBanglaDigits(loyaltyData.summary.tierCounts.platinum)}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoyaltyTierFilter('gold')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1 ${
+                loyaltyTierFilter === 'gold'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+              }`}
+            >
+              <span>🥇 গোল্ড (৳১০k+)</span>
+              <span className="bg-amber-200/60 px-1.5 py-0.2 rounded-full text-[10px]">
+                {toBanglaDigits(loyaltyData.summary.tierCounts.gold)}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoyaltyTierFilter('silver')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1 ${
+                loyaltyTierFilter === 'silver'
+                  ? 'bg-slate-700 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+              }`}
+            >
+              <span>🥈 সিলভার (৳৫k+)</span>
+              <span className="bg-slate-200/80 px-1.5 py-0.2 rounded-full text-[10px]">
+                {toBanglaDigits(loyaltyData.summary.tierCounts.silver)}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoyaltyTierFilter('bronze')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1 ${
+                loyaltyTierFilter === 'bronze'
+                  ? 'bg-orange-600 text-white shadow-xs'
+                  : 'bg-orange-50 text-orange-800 hover:bg-orange-100 border border-orange-200'
+              }`}
+            >
+              <span>🥉 ব্রোঞ্জ (৳১.৫k+)</span>
+              <span className="bg-orange-200/60 px-1.5 py-0.2 rounded-full text-[10px]">
+                {toBanglaDigits(loyaltyData.summary.tierCounts.bronze)}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoyaltyTierFilter('starter')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1 ${
+                loyaltyTierFilter === 'starter'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+              }`}
+            >
+              <span>🌱 সাধারণ</span>
+              <span className="bg-emerald-200/60 px-1.5 py-0.2 rounded-full text-[10px]">
+                {toBanglaDigits(loyaltyData.summary.tierCounts.starter)}
+              </span>
+            </button>
+          </div>
+
+          {/* Search Input */}
+          <div className="relative w-full sm:w-72 shrink-0">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="নাম, ফোন, স্তর বা ঠিকানা সার্চ..."
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#1E8A52]"
+            />
+          </div>
         </div>
       </div>
 
@@ -332,107 +568,194 @@ export const CustomerTab: React.FC<CustomerTabProps> = ({
           <table className="w-full text-left text-sm text-slate-700">
             <thead className="bg-[#0A4A29]/5 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
               <tr>
+                <th className="px-4 py-3.5 text-center w-16">র‍্যাঙ্ক</th>
                 <th className="px-4 py-3.5">কাস্টমারের তথ্য</th>
+                <th className="px-4 py-3.5">লয়ালটি স্তর ও স্কোর</th>
                 <th className="px-4 py-3.5">ঠিকানা</th>
-                <th className="px-4 py-3.5">প্রথম ও শেষ অর্ডার</th>
                 <th className="px-4 py-3.5 text-center">মোট অর্ডার</th>
-                <th className="px-4 py-3.5">মোট ক্রয় (টাকা)</th>
-                <th className="px-4 py-3.5">গিফট স্ট্যাটাস</th>
+                <th className="px-4 py-3.5 text-right">মোট ক্রয় (টাকা)</th>
+                <th className="px-4 py-3.5 text-center">উপহার</th>
                 <th className="px-4 py-3.5 text-right">অ্যাকশন</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
+                  <td colSpan={8} className="px-4 py-12 text-center text-slate-400">
                     <div className="max-w-xs mx-auto space-y-2">
                       <Users className="w-12 h-12 text-slate-300 mx-auto" />
-                      <p className="font-bold text-slate-700">এখনো কোনো কাস্টমার তথ্য নেই।</p>
-                      <p className="text-xs text-slate-400">নতুন কাস্টমার যুক্ত করতে উপরের বাটনে ক্লিক করুন।</p>
+                      <p className="font-bold text-slate-700">এখনো কোনো কাস্টমার তথ্য পাওয়া যায়নি।</p>
+                      <p className="text-xs text-slate-400">ফিল্টার পরিবর্তন করুন অথবা নতুন কাস্টমার যুক্ত করুন।</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredCustomers.map((c) => (
-                  <tr key={c.id || c.phone} className="hover:bg-slate-50 transition">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <div
-                          onClick={() => setSelectedCustomerForHistory(c)}
-                          className="font-bold text-slate-900 hover:text-[#1E8A52] cursor-pointer flex items-center gap-1.5"
-                        >
-                          <span>{c.name}</span>
-                          <ExternalLink className="w-3 h-3 text-slate-400" />
-                        </div>
+                filteredCustomers.map((c) => {
+                  const loyalty = getCustomerLoyalty(c);
+                  const isRank1 = loyalty?.rank === 1;
+                  const isRank2 = loyalty?.rank === 2;
+                  const isRank3 = loyalty?.rank === 3;
+                  const isVip = loyalty?.tier.key === 'platinum' || loyalty?.tier.key === 'gold';
 
-                        {/* Customer Type Badge */}
-                        {c.customerType === 'expat' ? (
-                          <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-200">
-                            <Globe className="w-2.5 h-2.5 text-indigo-600" />
-                            <span>প্রবাসী {c.country && c.country !== 'প্রবাসী' && c.country !== 'বাংলাদেশ (Bangladesh)' ? `(${c.country.split('(')[0].trim()})` : ''}</span>
-                          </span>
+                  return (
+                    <tr
+                      key={c.id || c.phone}
+                      className={`transition ${
+                        isRank1
+                          ? 'bg-amber-50/40 hover:bg-amber-50/80 font-medium'
+                          : isRank2
+                          ? 'bg-slate-50/50 hover:bg-slate-100/70'
+                          : isRank3
+                          ? 'bg-orange-50/30 hover:bg-orange-50/60'
+                          : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      {/* Loyalty Rank Column */}
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-black shadow-xs ${
+                            isRank1
+                              ? 'bg-amber-400 text-amber-950 ring-2 ring-amber-300'
+                              : isRank2
+                              ? 'bg-slate-300 text-slate-900 ring-2 ring-slate-200'
+                              : isRank3
+                              ? 'bg-orange-300 text-orange-950 ring-2 ring-orange-200'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                          title={`লয়ালটি র‍্যাঙ্ক: ${loyalty?.rankDisplayBangla || '#'}`}
+                        >
+                          {isRank1 ? '👑' : isRank2 ? '🥇' : isRank3 ? '🥈' : (loyalty ? loyalty.rankDisplayBangla : '—')}
+                        </span>
+                      </td>
+
+                      {/* Customer Info */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <div
+                            onClick={() => setSelectedCustomerForHistory(c)}
+                            className="font-bold text-slate-900 hover:text-[#1E8A52] cursor-pointer flex items-center gap-1.5"
+                          >
+                            <span>{c.name}</span>
+                            <ExternalLink className="w-3 h-3 text-slate-400" />
+                          </div>
+
+                          {/* Customer Type Badge */}
+                          {c.customerType === 'expat' ? (
+                            <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-200">
+                              <Globe className="w-2.5 h-2.5 text-indigo-600" />
+                              <span>প্রবাসী {c.country && c.country !== 'প্রবাসী' && c.country !== 'বাংলাদেশ (Bangladesh)' ? `(${c.country.split('(')[0].trim()})` : ''}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black px-1.5 py-0.5 rounded-full border border-emerald-200">
+                              <span>🇧🇩 দেশি</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                          <Phone className="w-3 h-3 text-[#0A4A29]" />
+                          <span>{c.phone}</span>
+                        </div>
+                      </td>
+
+                      {/* Loyalty Tier & Score Column */}
+                      <td className="px-4 py-3 min-w-[170px]">
+                        {loyalty ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${loyalty.tier.bgClass} ${loyalty.tier.textClass} ${loyalty.tier.borderClass}`}
+                              >
+                                <span>{loyalty.tier.badgeEmoji}</span>
+                                <span>{loyalty.tier.labelBn}</span>
+                              </span>
+                              <span className="bg-[#0A4A29]/10 text-[#0A4A29] px-2 py-0.5 rounded-md font-black text-xs">
+                                {loyalty.scoreDisplayBangla} পয়েন্ট
+                              </span>
+                            </div>
+
+                            {/* Mini progress to next tier */}
+                            {loyalty.nextTier ? (
+                              <div className="pt-0.5">
+                                <div className="w-28 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                  <div
+                                    className="bg-gradient-to-r from-amber-500 to-[#1E8A52] h-1.5 rounded-full"
+                                    style={{ width: `${loyalty.progressPercent}%` }}
+                                    title={`${loyalty.nextTier.labelBn}-এ যেতে আর ৳${loyalty.amountToNextTier.toLocaleString('en-US')} কেনাকাটা বাকি`}
+                                  />
+                                </div>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">
+                                  {loyalty.nextTier.badgeEmoji} আর ৳{loyalty.amountToNextTier.toLocaleString('en-US')} বাকি
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-purple-700 font-bold block">
+                                👑 সর্বোচ্চ স্তর অর্জিত
+                              </span>
+                            )}
+                          </div>
                         ) : (
-                          <span className="inline-flex items-center gap-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black px-1.5 py-0.5 rounded-full border border-emerald-200">
-                            <span>🇧🇩 দেশি</span>
-                          </span>
+                          <span className="text-xs text-slate-400">—</span>
                         )}
-                      </div>
-                      <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                        <Phone className="w-3 h-3 text-[#0A4A29]" />
-                        <span>{c.phone}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-slate-600 max-w-xs truncate">
-                      {c.address || '—'}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
-                      <div>প্রথম: {c.firstOrder || '—'}</div>
-                      <div className="font-semibold text-slate-700">শেষ: {c.lastOrder || '—'}</div>
-                    </td>
-                    <td className="px-4 py-3 font-bold text-slate-800 text-center">
-                      {c.totalOrders}
-                    </td>
-                    <td className="px-4 py-3 font-black text-[#0A4A29] text-base whitespace-nowrap">
-                      ৳ {Number(c.totalPurchase || 0).toLocaleString('en-US')}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          c.giftStatus === 'Sent'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        <Gift className="w-3 h-3" />
-                        <span>{c.giftStatus === 'Sent' ? 'পাঠানো হয়েছে' : 'পাঠানো হয়নি'}</span>
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => setSelectedCustomerForHistory(c)}
-                          className="px-2.5 py-1.5 text-xs bg-emerald-50 hover:bg-emerald-100 text-[#0A4A29] rounded-lg font-bold transition cursor-pointer"
+                      </td>
+
+                      {/* Address */}
+                      <td className="px-4 py-3 text-xs text-slate-600 max-w-xs truncate">
+                        {c.address || '—'}
+                      </td>
+
+                      {/* Total Orders */}
+                      <td className="px-4 py-3 font-bold text-slate-800 text-center">
+                        {toBanglaDigits(c.totalOrders)}
+                      </td>
+
+                      {/* Total Purchase Volume */}
+                      <td className="px-4 py-3 font-black text-[#0A4A29] text-base text-right whitespace-nowrap">
+                        ৳ {Number(c.totalPurchase || 0).toLocaleString('en-US')}
+                      </td>
+
+                      {/* Gift Status */}
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                            c.giftStatus === 'Sent'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
                         >
-                          অর্ডার হিস্ট্রি
-                        </button>
-                        <button
-                          onClick={() => openEditModal(c)}
-                          className="p-1.5 text-slate-600 hover:text-[#0A4A29] hover:bg-slate-100 rounded-lg transition cursor-pointer"
-                          title="সম্পাদনা"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setCustomerToDelete(c)}
-                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
-                          title="মুছে ফেলুন"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          <Gift className="w-3 h-3" />
+                          <span>{c.giftStatus === 'Sent' ? 'পাঠানো হয়েছে' : 'পাঠানো হয়নি'}</span>
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setSelectedCustomerForHistory(c)}
+                            className="px-2.5 py-1.5 text-xs bg-emerald-50 hover:bg-emerald-100 text-[#0A4A29] rounded-lg font-bold transition cursor-pointer"
+                            title="লয়ালটি ও অর্ডার হিস্ট্রি"
+                          >
+                            হিস্ট্রি
+                          </button>
+                          <button
+                            onClick={() => openEditModal(c)}
+                            className="p-1.5 text-slate-600 hover:text-[#0A4A29] hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                            title="সম্পাদনা"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setCustomerToDelete(c)}
+                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                            title="মুছে ফেলুন"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -445,88 +768,158 @@ export const CustomerTab: React.FC<CustomerTabProps> = ({
               এখনো কোনো কাস্টমার তথ্য নেই।
             </div>
           ) : (
-            filteredCustomers.map((c) => (
-              <div key={c.id || c.phone} className="p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h3 className="font-bold text-slate-900 text-lg leading-tight">{c.name}</h3>
-                      {c.customerType === 'expat' ? (
-                        <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-200">
-                          <Globe className="w-2.5 h-2.5 text-indigo-600" />
-                          <span>প্রবাসী {c.country && c.country !== 'প্রবাসী' && c.country !== 'বাংলাদেশ (Bangladesh)' ? `(${c.country.split('(')[0].trim()})` : ''}</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black px-1.5 py-0.5 rounded-full border border-emerald-200">
-                          <span>🇧🇩 দেশি</span>
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 text-sm text-[#0A4A29] font-semibold mt-1">
-                      <Phone className="w-3.5 h-3.5 text-[#1E8A52]" />
-                      <a href={`tel:${c.phone}`} className="hover:underline">
-                        {c.phone}
-                      </a>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => openEditModal(c)}
-                      className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
-                      title="সম্পাদনা"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setCustomerToDelete(c)}
-                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
-                      title="মুছে ফেলুন"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+            filteredCustomers.map((c) => {
+              const loyalty = getCustomerLoyalty(c);
+              const isRank1 = loyalty?.rank === 1;
+              const isRank2 = loyalty?.rank === 2;
+              const isRank3 = loyalty?.rank === 3;
+              const isVip = loyalty?.tier.key === 'platinum' || loyalty?.tier.key === 'gold';
 
-                {c.address && (
-                  <p className="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                    {c.address}
-                  </p>
-                )}
+              return (
+                <div
+                  key={c.id || c.phone}
+                  className={`p-4 space-y-3 transition ${
+                    isRank1
+                      ? 'bg-amber-50/30 border-l-4 border-amber-500'
+                      : isRank2
+                      ? 'bg-slate-50/50 border-l-4 border-slate-400'
+                      : isRank3
+                      ? 'bg-orange-50/30 border-l-4 border-orange-400'
+                      : isVip
+                      ? 'bg-purple-50/20 border-l-4 border-purple-400'
+                      : 'border-l-4 border-transparent'
+                  }`}
+                >
+                  {/* Top Loyalty Rank Header on Mobile */}
+                  {loyalty && (
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-black ${
+                            isRank1
+                              ? 'bg-amber-400 text-amber-950'
+                              : isRank2
+                              ? 'bg-slate-300 text-slate-900'
+                              : isRank3
+                              ? 'bg-orange-300 text-orange-950'
+                              : 'bg-slate-200 text-slate-800'
+                          }`}
+                        >
+                          {isRank1 ? '👑' : isRank2 ? '🥇' : isRank3 ? '🥈' : loyalty.rankDisplayBangla}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold border ${loyalty.tier.bgClass} ${loyalty.tier.textClass} ${loyalty.tier.borderClass}`}
+                        >
+                          <span>{loyalty.tier.badgeEmoji}</span>
+                          <span>{loyalty.tier.labelBn}</span>
+                        </span>
+                      </div>
+                      <span className="bg-[#0A4A29]/10 text-[#0A4A29] px-2 py-0.5 rounded font-black text-xs">
+                        {loyalty.scoreDisplayBangla} পয়েন্ট
+                      </span>
+                    </div>
+                  )}
 
-                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">মোট অর্ডার</span>
-                    <span className="font-bold text-slate-800 text-sm">{c.totalOrders} টি</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="font-bold text-slate-900 text-lg leading-tight">{c.name}</h3>
+                        {c.customerType === 'expat' ? (
+                          <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-200">
+                            <Globe className="w-2.5 h-2.5 text-indigo-600" />
+                            <span>প্রবাসী {c.country && c.country !== 'প্রবাসী' && c.country !== 'বাংলাদেশ (Bangladesh)' ? `(${c.country.split('(')[0].trim()})` : ''}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black px-1.5 py-0.5 rounded-full border border-emerald-200">
+                            <span>🇧🇩 দেশি</span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm text-[#0A4A29] font-semibold mt-1">
+                        <Phone className="w-3.5 h-3.5 text-[#1E8A52]" />
+                        <a href={`tel:${c.phone}`} className="hover:underline">
+                          {c.phone}
+                        </a>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => openEditModal(c)}
+                        className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        title="সম্পাদনা"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setCustomerToDelete(c)}
+                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        title="মুছে ফেলুন"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-slate-400 block text-[10px]">মোট ক্রয়মূল্য</span>
-                    <span className="font-black text-[#0A4A29] text-base">
-                      ৳ {Number(c.totalPurchase || 0).toLocaleString('en-US')}
+
+                  {c.address && (
+                    <p className="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                      {c.address}
+                    </p>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">মোট অর্ডার</span>
+                      <span className="font-bold text-slate-800 text-sm">{toBanglaDigits(c.totalOrders)} টি</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-slate-400 block text-[10px]">মোট ক্রয়মূল্য (ভলিউম)</span>
+                      <span className="font-black text-[#0A4A29] text-base">
+                        ৳ {Number(c.totalPurchase || 0).toLocaleString('en-US')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Loyalty Progress on Mobile */}
+                  {loyalty?.nextTier && (
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 space-y-1">
+                      <div className="flex items-center justify-between text-[11px] text-slate-600">
+                        <span className="font-bold">পরবর্তী স্তর: {loyalty.nextTier.badgeEmoji} {loyalty.nextTier.labelBn}</span>
+                        <span className="font-bold text-slate-800">{toBanglaDigits(loyalty.progressPercent)}%</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-amber-500 to-[#1E8A52] h-1.5 rounded-full"
+                          style={{ width: `${loyalty.progressPercent}%` }}
+                        />
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        আর মাত্র ৳ {loyalty.amountToNextTier.toLocaleString('en-US')} কেনাকাটায় স্তর আপডেট হবে
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                        c.giftStatus === 'Sent'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      <Gift className="w-3 h-3" />
+                      <span>{c.giftStatus === 'Sent' ? 'উপহার পাঠানো হয়েছে' : 'উপহার পাঠানো হয়নি'}</span>
                     </span>
+
+                    <button
+                      onClick={() => setSelectedCustomerForHistory(c)}
+                      className="px-3 py-2 text-xs bg-emerald-50 hover:bg-emerald-100 text-[#0A4A29] rounded-xl font-bold transition min-h-[40px] cursor-pointer"
+                    >
+                      লয়ালটি ও হিস্ট্রি
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
-                      c.giftStatus === 'Sent'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    <Gift className="w-3 h-3" />
-                    <span>{c.giftStatus === 'Sent' ? 'উপহার পাঠানো হয়েছে' : 'উপহার পাঠানো হয়নি'}</span>
-                  </span>
-
-                  <button
-                    onClick={() => setSelectedCustomerForHistory(c)}
-                    className="px-3 py-2 text-xs bg-emerald-50 hover:bg-emerald-100 text-[#0A4A29] rounded-xl font-bold transition min-h-[40px] cursor-pointer"
-                  >
-                    হিস্ট্রি দেখুন
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -553,6 +946,56 @@ export const CustomerTab: React.FC<CustomerTabProps> = ({
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Loyalty Profile Banner */}
+            {(() => {
+              const loyalty = getCustomerLoyalty(selectedCustomerForHistory);
+              if (!loyalty) return null;
+              return (
+                <div className="bg-gradient-to-r from-amber-50 to-emerald-50 border-b border-amber-200/80 p-4 shrink-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-amber-400 text-amber-950 font-black text-xs px-2.5 py-1 rounded-full shadow-xs">
+                        লয়ালটি র‍্যাঙ্ক {loyalty.rankDisplayBangla}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${loyalty.tier.bgClass} ${loyalty.tier.textClass} ${loyalty.tier.borderClass}`}>
+                        <span>{loyalty.tier.badgeEmoji}</span>
+                        <span>{loyalty.tier.labelBn}</span>
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs text-slate-500 font-medium">লয়ালটি স্কোর: </span>
+                      <strong className="text-sm font-black text-[#0A4A29]">
+                        {loyalty.scoreDisplayBangla} পয়েন্ট
+                      </strong>
+                    </div>
+                  </div>
+
+                  {loyalty.nextTier ? (
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-600 mb-1">
+                        <span>পরবর্তী স্তর: {loyalty.nextTier.badgeEmoji} {loyalty.nextTier.labelBn}</span>
+                        <span className="font-bold">{toBanglaDigits(loyalty.progressPercent)}% অর্জিত</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-amber-500 to-[#1E8A52] h-2 rounded-full"
+                          style={{ width: `${loyalty.progressPercent}%` }}
+                        />
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-1">
+                        আর মাত্র ৳ {loyalty.amountToNextTier.toLocaleString('en-US')} কেনাকাটায় {loyalty.nextTier.labelBn} স্তরে উন্নীত হবেন (মোট ভলিউম লক্ষ্য: ৳{loyalty.nextTier.minPurchase.toLocaleString('en-US')})
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-purple-800 font-bold flex items-center gap-1.5">
+                      <Crown className="w-4 h-4 text-purple-600" />
+                      <span>অভিনন্দন! এই গ্রাহক ফেনী মার্টের সর্বোচ্চ প্ল্যাটিনাম ভিআইপি স্তরে অবস্থান করছেন।</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* List */}
             <div className="overflow-y-auto p-6 space-y-3 flex-1 pb-12">

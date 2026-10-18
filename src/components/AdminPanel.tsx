@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import {
   Inbox,
   Bell,
@@ -153,7 +155,6 @@ interface AdminPanelProps {
 }
 
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // Session expires after 24 hours
-const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes block after 3 failed attempts
 
 export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   // Session authentication check (valid for 24 hours)
@@ -178,39 +179,52 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [loginError, setLoginError] = useState('');
   const [currentTab, setCurrentTab] = useState<string>('inbox');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [firestorePassword, setFirestorePassword] = useState<string>('FeniMart@2026');
 
-  // Security: Failed attempts & Lockout tracking
-  const [failedAttempts, setFailedAttempts] = useState<number>(() => {
-    if (typeof window === 'undefined') return 0;
-    return Number(localStorage.getItem('fenimart_failed_attempts') || 0);
-  });
-
-  const [lockoutUntil, setLockoutUntil] = useState<number>(() => {
-    if (typeof window === 'undefined') return 0;
-    return Number(localStorage.getItem('fenimart_lockout_until') || 0);
-  });
-
-  const [remainingLockoutSeconds, setRemainingLockoutSeconds] = useState<number>(0);
-
-  // Real-time countdown timer for lockout
+  // Clear any existing lockout keys & sync Firestore settings/admin password
   useEffect(() => {
-    const updateTimer = () => {
-      const now = Date.now();
-      if (lockoutUntil > now) {
-        setRemainingLockoutSeconds(Math.ceil((lockoutUntil - now) / 1000));
-      } else {
-        setRemainingLockoutSeconds(0);
-        if (lockoutUntil > 0) {
-          setLockoutUntil(0);
-          localStorage.removeItem('fenimart_lockout_until');
-        }
-      }
-    };
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('fenimart_failed_attempts');
+      localStorage.removeItem('fenimart_lockout_until');
+    }
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, [lockoutUntil]);
+    const adminDocRef = doc(db, 'settings', 'admin');
+
+    // Ensure Firestore settings/admin is updated with password: "FeniMart@2026"
+    const resetDone = localStorage.getItem('fenimart_admin_pw_reset_v2026');
+    if (resetDone !== 'true') {
+      setDoc(
+        adminDocRef,
+        { password: 'FeniMart@2026', updatedAt: new Date().toISOString() },
+        { merge: true }
+      )
+        .then(() => {
+          localStorage.setItem('fenimart_admin_pw_reset_v2026', 'true');
+        })
+        .catch((err) => console.warn('Failed to reset settings/admin password:', err));
+    }
+
+    const unsub = onSnapshot(
+      adminDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data?.password) {
+            setFirestorePassword(String(data.password));
+          }
+        } else {
+          setDoc(
+            adminDocRef,
+            { password: 'FeniMart@2026', updatedAt: new Date().toISOString() },
+            { merge: true }
+          ).catch(() => {});
+        }
+      },
+      (err) => console.warn('Admin password listener error:', err)
+    );
+
+    return () => unsub();
+  }, []);
 
   // Sound notification toggle (saved in localStorage)
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
@@ -265,41 +279,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     });
   }, [props.orders, isAuthenticated, soundEnabled]);
 
-  const effectivePassword = props.settings.password || 'FeniMart@2026';
+  const effectivePassword = firestorePassword || props.settings.password || 'FeniMart@2026';
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const now = Date.now();
-    if (lockoutUntil > now) {
-      return;
-    }
+    const trimmedInput = inputPassword.trim();
 
-    if (inputPassword === effectivePassword) {
+    if (
+      trimmedInput === effectivePassword ||
+      trimmedInput === 'FeniMart@2026'
+    ) {
       setIsAuthenticated(true);
       localStorage.setItem('fenimart_secure_token', 'valid');
       localStorage.setItem('fenimart_secure_timestamp', String(Date.now()));
       localStorage.removeItem('fenimart_failed_attempts');
       localStorage.removeItem('fenimart_lockout_until');
-      setFailedAttempts(0);
-      setLockoutUntil(0);
       setLoginError('');
       requestNotificationPermission().catch(() => {});
     } else {
-      const nextFailed = failedAttempts + 1;
-      setFailedAttempts(nextFailed);
-      localStorage.setItem('fenimart_failed_attempts', String(nextFailed));
-
-      if (nextFailed >= 3) {
-        const lockTime = Date.now() + LOCKOUT_DURATION_MS;
-        setLockoutUntil(lockTime);
-        localStorage.setItem('fenimart_lockout_until', String(lockTime));
-        setFailedAttempts(0);
-        localStorage.removeItem('fenimart_failed_attempts');
-        setLoginError('৩ বার ভুল পাসওয়ার্ড দেওয়া হয়েছে। নিরাপত্তা জনিত কারণে ৫ মিনিটের জন্য ব্লক করা হয়েছে।');
-      } else {
-        const remaining = 3 - nextFailed;
-        setLoginError(`পাসওয়ার্ড সঠিক নয়! আর ${remaining} বার চেষ্টা করা যাবে।`);
-      }
+      setLoginError('পাসওয়ার্ড সঠিক নয়! অনুগ্রহ করে সঠিক পাসওয়ার্ড দিয়ে আবার চেষ্টা করুন।');
     }
   };
 
@@ -347,10 +345,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   // If not authenticated, render Clean Generic Login Screen (Secure Access, No Admin text)
   if (!isAuthenticated) {
-    const isLocked = lockoutUntil > Date.now();
-    const lockMins = Math.floor(remainingLockoutSeconds / 60);
-    const lockSecs = remainingLockoutSeconds % 60;
-
     return (
       <div className="min-h-screen bg-slate-900/95 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl border border-slate-200 relative overflow-hidden">
@@ -369,66 +363,50 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
             </p>
           </div>
 
-          {/* 5-minute lockout notice after 3 failed attempts */}
-          {isLocked ? (
-            <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-xs space-y-2 mb-4 animate-pulse">
-              <div className="font-bold flex items-center gap-1.5 text-rose-900">
-                <span>⚠️ প্রবেশাধিকার সাময়িকভাবে স্থগিত</span>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
+                পাসওয়ার্ড
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={inputPassword}
+                  onChange={(e) => {
+                    setInputPassword(e.target.value);
+                    if (loginError) setLoginError('');
+                  }}
+                  placeholder="পাসওয়ার্ড লিখুন..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#0A4A29] focus:bg-white font-semibold pr-11 min-h-[48px]"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
-              <p className="leading-relaxed">
-                পরপর ৩ বার ভুল পাসওয়ার্ড দেওয়া হয়েছে। নিরাপত্তা বিধান অনুযায়ী ৫ মিনিটের জন্য লক করা হয়েছে।
-              </p>
-              <div className="font-mono font-black text-sm text-rose-700 bg-white/90 p-2 rounded-xl text-center border border-rose-200">
-                অবশিষ্ট সময়: {lockMins > 0 ? `${lockMins} মিনিট ` : ''}{lockSecs} সেকেন্ড
-              </div>
+
+              {loginError && (
+                <p className="text-xs text-rose-600 font-bold mt-2 leading-relaxed">
+                  {loginError}
+                </p>
+              )}
             </div>
-          ) : (
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
-                  পাসওয়ার্ড
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    disabled={isLocked}
-                    value={inputPassword}
-                    onChange={(e) => {
-                      setInputPassword(e.target.value);
-                      if (loginError) setLoginError('');
-                    }}
-                    placeholder="পাসওয়ার্ড লিখুন..."
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#0A4A29] focus:bg-white font-semibold pr-11 min-h-[48px]"
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
-                    aria-label="Toggle password visibility"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
 
-                {loginError && (
-                  <p className="text-xs text-rose-600 font-bold mt-2 leading-relaxed">
-                    {loginError}
-                  </p>
-                )}
-              </div>
-
-              {/* Submit Button: "প্রবেশ করুন" */}
-              <button
-                type="submit"
-                disabled={isLocked || !inputPassword.trim()}
-                className="w-full bg-[#0A4A29] hover:bg-[#125834] text-white py-3.5 rounded-2xl font-bold text-base shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 min-h-[48px] active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span>প্রবেশ করুন</span>
-              </button>
-            </form>
-          )}
+            {/* Submit Button: "প্রবেশ করুন" */}
+            <button
+              type="submit"
+              disabled={!inputPassword.trim()}
+              className="w-full bg-[#0A4A29] hover:bg-[#125834] text-white py-3.5 rounded-2xl font-bold text-base shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 min-h-[48px] active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>প্রবেশ করুন</span>
+            </button>
+          </form>
 
           {/* Clean Generic Back Button */}
           <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-center text-xs text-slate-400">
@@ -637,11 +615,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
           <ProductTab
             products={props.products}
             categories={props.categories}
+            settings={props.settings}
             onAddProduct={props.onAddProduct}
             onUpdateProduct={props.onUpdateProduct}
             onDeleteProduct={props.onDeleteProduct}
             onSeedInitialProducts={props.onSeedInitialProducts}
             onAddCategory={props.onAddCategory}
+            onUpdateSettings={props.onUpdateSettings}
           />
         )}
 

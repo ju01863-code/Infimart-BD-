@@ -26,6 +26,8 @@ export interface Product {
   price: number;
   unit: ProductUnit; // e.g. "কেজি", "১০০ গ্রাম", "পিস", "ভরি"
   stock: 'In Stock' | 'Low Stock' | 'Out of Stock';
+  stockQuantity?: number; // বর্তমান মজুদ সংখ্যা / পরিমাণ (Current Stock Quantity)
+  lowStockThreshold?: number; // নির্দিষ্ট রিস্টক সতর্কতা থ্রেশহোল্ড (Custom Restock Alert Threshold)
   image: string; // Firebase storage URL or optimized Base64
   createdAt?: string;
 }
@@ -181,6 +183,7 @@ export interface StoreSettings {
   callEnabled?: boolean; // default true: Enable/Disable Call button
   primaryPhone?: string; // e.g. "01821558813"
   messengerGreeting?: string; // e.g. "স্বাগতম! Feni Mart-এ অর্ডার করতে চাইলে পণ্যের নাম লিখুন।"
+  defaultLowStockThreshold?: number; // ডিফল্ট রিস্টক থ্রেশহোল্ড (default: 5)
 }
 
 export interface Category {
