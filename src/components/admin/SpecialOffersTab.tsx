@@ -211,9 +211,9 @@ export const SpecialOffersTab: React.FC<SpecialOffersTabProps> = ({
 
     const dateStr = new Date().toISOString().split('T')[0];
     if (format === 'xlsx') {
-      exportToExcel(data, `FeniMart_SpecialOffers_${dateStr}`, 'SpecialOffers');
+      exportToExcel(data, `InfiMart_SpecialOffers_${dateStr}`, 'SpecialOffers');
     } else {
-      exportToCSV(data, `FeniMart_SpecialOffers_${dateStr}`);
+      exportToCSV(data, `InfiMart_SpecialOffers_${dateStr}`);
     }
   };
 

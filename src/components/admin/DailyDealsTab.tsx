@@ -188,8 +188,8 @@ export const DailyDealsTab: React.FC<DailyDealsTabProps> = ({
     }));
 
     const dateStr = new Date().toISOString().split('T')[0];
-    if (format === 'xlsx') exportToExcel(data, `FeniMart_DailyDeals_${dateStr}`, 'DailyDeals');
-    else exportToCSV(data, `FeniMart_DailyDeals_${dateStr}`);
+    if (format === 'xlsx') exportToExcel(data, `InfiMart_DailyDeals_${dateStr}`, 'DailyDeals');
+    else exportToCSV(data, `InfiMart_DailyDeals_${dateStr}`);
   };
 
   return (

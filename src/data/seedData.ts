@@ -1,11 +1,11 @@
 import { Product, StoreSettings, Customer } from '../types';
 
 export const DEFAULT_SETTINGS: StoreSettings = {
-  storeName: 'FENI MART',
+  storeName: 'InfiMart BD',
   slogan: 'সাশ্রয়ের ঠিকানা, ভরসার বাজার',
   englishTagline: 'Your Monthly Bazar, Delivered.',
   whatsapp: '+880 1821-558813',
-  password: 'FeniMart@2026',
+  password: 'Jj0558949360',
   deliveryCharge: 50,
   freeDeliveryEnabled: true,
   freeDeliveryThreshold: 3000,
@@ -20,16 +20,16 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   bkashNumber: '01821-558813',
   nagadNumber: '01821-558813',
   rocketNumber: '01821-558813',
-  bankDetails: 'ব্যাংক: ইসলামী ব্যাংক বাংলাদেশ লিমিটেড, শাখা: ফেনী শাখা, হিসাব নং: ২০৫০১৪৫০২০০০০০০০০, নাম: Feni Mart',
+  bankDetails: 'ব্যাংক: ইসলামী ব্যাংক বাংলাদেশ লিমিটেড, শাখা: ফেনী শাখা, হিসাব নং: ২০৫০১৪৫০২০০০০০০০০, নাম: InfiMart BD',
   advanceAmountType: 'full',
   advanceFixedAmount: 200,
   address: 'ট্রাঙ্ক রোড, ফেনী সদর, ফেনী - ৩৯০০, বাংলাদেশ',
-  messengerUsername: 'fenimartbd',
+  messengerUsername: 'infimartbd',
   messengerEnabled: true,
   whatsappEnabled: true,
   callEnabled: true,
   primaryPhone: '01821-558813',
-  messengerGreeting: 'স্বাগতম! Feni Mart-এ অর্ডার করতে চাইলে পণ্যের নাম লিখুন।',
+  messengerGreeting: 'স্বাগতম! InfiMart BD-তে অর্ডার করতে চাইলে পণ্যের নাম লিখুন।',
   defaultLowStockThreshold: 5,
 };
 

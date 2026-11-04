@@ -247,9 +247,9 @@ export const SalesTab: React.FC<SalesTabProps> = ({
 
     const dateStr = new Date().toISOString().split('T')[0];
     if (format === 'xlsx') {
-      exportToExcel(data, `FeniMart_Sales_${dateStr}`);
+      exportToExcel(data, `InfiMart_Sales_${dateStr}`);
     } else {
-      exportToCSV(data, `FeniMart_Sales_${dateStr}`);
+      exportToCSV(data, `InfiMart_Sales_${dateStr}`);
     }
   };
 
@@ -403,7 +403,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({
 
       {/* Orders Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-700">
             <thead className="bg-[#0A4A29]/5 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
               <tr>
@@ -544,7 +544,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({
                           {custPhone && (
                             <a
                               href={`https://wa.me/${custPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                                `আসসালামু আলাইকুম ${order.customerName} ভাই/আপু, Feni Mart থেকে আপনার ${prodName} এর অর্ডার বিষয়ে যোগাযোগ করছি।`
+                                `আসসালামু আলাইকুম ${order.customerName} ভাই/আপু, InfiMart BD থেকে আপনার ${prodName} এর অর্ডার বিষয়ে যোগাযোগ করছি।`
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -580,6 +580,144 @@ export const SalesTab: React.FC<SalesTabProps> = ({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards View (100% Mobile Friendly, Zero Horizontal Scroll) */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {filteredOrders.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm">
+              <ShoppingBag className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+              <p className="font-bold text-slate-700">কোনো অর্ডার পাওয়া যায়নি।</p>
+            </div>
+          ) : (
+            filteredOrders.map((order) => {
+              const isDeliv = isDelivered(order);
+              const orderSrc = getOrderSource(order);
+              const custPhone = getOrderCustomerPhone(order);
+              const custAddress = getOrderCustomerAddress(order);
+              const prodName = getOrderProductName(order);
+              const prodQty = getOrderQuantity(order);
+              const prodUnit = getOrderUnit(order);
+              const prodUnitPrice = getOrderUnitPrice(order);
+              const orderTotal = getOrderTotal(order);
+
+              return (
+                <div key={order.id} className="p-4 space-y-3 hover:bg-slate-50 transition">
+                  {/* Top Bar: Date, Source & Delivery Badge */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-bold text-slate-600">
+                        {order.date || order.createdAt?.split('T')[0] || '—'}
+                      </span>
+                      {orderSrc === 'Website' ? (
+                        <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-300">
+                          <Globe className="w-3 h-3 text-emerald-600" />
+                          <span>Website</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-300">
+                          <MessageCircle className="w-3 h-3 text-green-600" />
+                          <span>WhatsApp</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleStatusToggle(order)}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition min-h-[36px] cursor-pointer ${
+                        isDeliv
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-800 border border-amber-300'
+                      }`}
+                    >
+                      {isDeliv ? (
+                        <>
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>ডেলিভার্ড</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3.5 h-3.5 text-amber-600" />
+                          <span>পেন্ডিং</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Customer & Address */}
+                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 text-sm">{order.customerName}</span>
+                      {custPhone && (
+                        <a
+                          href={`tel:${custPhone}`}
+                          className="inline-flex items-center gap-1 text-xs font-mono font-bold text-[#1E8A52] bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 min-h-[32px]"
+                        >
+                          <Phone className="w-3 h-3" />
+                          <span>{custPhone}</span>
+                        </a>
+                      )}
+                    </div>
+                    {custAddress && (
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        📍 {custAddress}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Product & Price Details */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                    <div>
+                      <div className="font-bold text-slate-800 text-sm">{prodName}</div>
+                      <div className="text-xs text-slate-500">
+                        পরিমাণ: {prodQty} {prodUnit} {prodUnitPrice > 0 && `(৳${prodUnitPrice}/${prodUnit})`}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-base font-black text-[#0A4A29]">
+                        ৳{orderTotal.toLocaleString('en-US')}
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-medium">
+                        {order.paymentMethod || 'ক্যাশ অন ডেলিভারি'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile Actions: WhatsApp chat, Edit, Delete */}
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    {custPhone && (
+                      <a
+                        href={`https://wa.me/${custPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                          `আসসালামু আলাইকুম ${order.customerName} ভাই/আপু, InfiMart BD থেকে আপনার ${prodName} এর অর্ডার বিষয়ে যোগাযোগ করছি।`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-h-[44px] px-3 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs"
+                      >
+                        <MessageCircle className="w-4 h-4 fill-white" />
+                        <span>WhatsApp</span>
+                      </a>
+                    )}
+                    <button
+                      onClick={() => openEditModal(order)}
+                      className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+                      title="সম্পাদনা"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setOrderToDelete(order)}
+                      className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition cursor-pointer"
+                      title="মুছে ফেলুন"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

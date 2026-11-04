@@ -140,7 +140,7 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
 
     exportToExcel(
       summaryData,
-      `FeniMart_Report_${reportType}_${
+      `InfiMart_Report_${reportType}_${
         reportType === 'Daily'
           ? selectedDate
           : reportType === 'Monthly'

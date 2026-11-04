@@ -250,9 +250,9 @@ export const PackagesTab: React.FC<PackagesTabProps> = ({
 
     const dateStr = new Date().toISOString().split('T')[0];
     if (format === 'xlsx') {
-      exportToExcel(data, `FeniMart_Packages_${dateStr}`, 'Packages');
+      exportToExcel(data, `InfiMart_Packages_${dateStr}`, 'Packages');
     } else {
-      exportToCSV(data, `FeniMart_Packages_${dateStr}`);
+      exportToCSV(data, `InfiMart_Packages_${dateStr}`);
     }
   };
 

@@ -161,9 +161,9 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
 
     const dateStr = new Date().toISOString().split('T')[0];
     if (format === 'xlsx') {
-      exportToExcel(data, `FeniMart_Product_Reviews_${dateStr}`, 'Reviews');
+      exportToExcel(data, `InfiMart_Product_Reviews_${dateStr}`, 'Reviews');
     } else {
-      exportToCSV(data, `FeniMart_Product_Reviews_${dateStr}`);
+      exportToCSV(data, `InfiMart_Product_Reviews_${dateStr}`);
     }
   };
 
@@ -466,7 +466,7 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
                     <CornerDownRight className="w-4 h-4 text-[#0A4A29] shrink-0 mt-0.5" />
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-[#0A4A29]">ফেনী মার্ট (অ্যাডমিন রিপ্লাই):</span>
+                        <span className="font-bold text-[#0A4A29]">InfiMart BD (অ্যাডমিন রিপ্লাই):</span>
                         <button
                           onClick={() => {
                             setReplyingReviewId(review.id || null);

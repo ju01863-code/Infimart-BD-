@@ -21,7 +21,7 @@ export const Footer: React.FC<FooterProps> = ({ settings, onAdminClick }) => {
             </div>
             <div>
               <h4 className="font-bold text-sm text-[#FFE0A8]">দ্রুত ডেলিভারি</h4>
-              <p className="text-xs text-white/80">ফেনী শহরের ভেতর দ্রুততম ডেলিভারি</p>
+              <p className="text-xs text-white/80">দ্রুততম সময়ে নির্ভরযোগ্য হোম ডেলিভারি</p>
             </div>
           </div>
 
@@ -61,14 +61,14 @@ export const Footer: React.FC<FooterProps> = ({ settings, onAdminClick }) => {
       <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
         <div>
           <div className="text-2xl font-black tracking-wider leading-none mb-2">
-            <span className="text-white">FENI </span>
-            <span className="text-[#FFB300]">MART</span>
+            <span className="text-white">InfiMart </span>
+            <span className="text-[#FFB300]">BD</span>
           </div>
           <p className="text-[#FFE0A8] font-medium mb-3">
             {settings.slogan || 'সাশ্রয়ের ঠিকানা, ভরসার বাজার'}
           </p>
           <p className="text-white/70 text-xs leading-relaxed mb-4">
-            ফেনী বাসীর জন্য দৈনন্দিন গ্রোসারি ও মাসিক বাজার সহজ ও নির্ভরযোগ্য করতে আমরা প্রতিশ্রুতিবদ্ধ। কোনো ঝামেলা ছাড়াই সরাসরি হোয়াটসঅ্যাপে অর্ডার করুন।
+            দৈনন্দিন গ্রোসারি ও মাসিক বাজার সহজ ও নিশ্চিন্ত করতে আমরা প্রতিশ্রুতিবদ্ধ — নির্ভরযোগ্য অনলাইন বাজার, বাজারের চেয়ে সাশ্রয়ী দামে! কোনো ঝামেলা ছাড়াই সরাসরি হোয়াটসঅ্যাপে অর্ডার করুন।
           </p>
         </div>
 
@@ -109,14 +109,14 @@ export const Footer: React.FC<FooterProps> = ({ settings, onAdminClick }) => {
           </ol>
 
           <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-white/50">
-            <span>ফেনী মার্ট — সাশ্রয়ের ঠিকানা, ভরসার বাজার</span>
+            <span>ইনফিমার্ট বিডি — সাশ্রয়ের ঠিকানা, ভরসার বাজার</span>
           </div>
         </div>
       </div>
 
       {/* Copyright */}
       <div className="border-t border-white/10 py-4 text-center text-xs text-white/60 bg-[#06331C]">
-        <p>© {new Date().getFullYear()} Feni Mart. সর্বস্বত্ব সংরক্ষিত। Your Monthly Bazar, Delivered.</p>
+        <p>© {new Date().getFullYear()} InfiMart BD. সর্বস্বত্ব সংরক্ষিত। Your Monthly Bazar, Delivered.</p>
       </div>
     </footer>
   );

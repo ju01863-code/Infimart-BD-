@@ -214,8 +214,8 @@ export const PreBookingTab: React.FC<PreBookingTabProps> = ({
     }));
 
     const dateStr = new Date().toISOString().split('T')[0];
-    if (format === 'xlsx') exportToExcel(data, `FeniMart_PreBookings_${dateStr}`, 'Campaigns');
-    else exportToCSV(data, `FeniMart_PreBookings_${dateStr}`);
+    if (format === 'xlsx') exportToExcel(data, `InfiMart_PreBookings_${dateStr}`, 'Campaigns');
+    else exportToCSV(data, `InfiMart_PreBookings_${dateStr}`);
   };
 
   const handleExportOrders = (format: 'xlsx' | 'csv') => {
@@ -235,8 +235,8 @@ export const PreBookingTab: React.FC<PreBookingTabProps> = ({
     }));
 
     const dateStr = new Date().toISOString().split('T')[0];
-    if (format === 'xlsx') exportToExcel(data, `FeniMart_PreBookingOrders_${dateStr}`, 'Orders');
-    else exportToCSV(data, `FeniMart_PreBookingOrders_${dateStr}`);
+    if (format === 'xlsx') exportToExcel(data, `InfiMart_PreBookingOrders_${dateStr}`, 'Orders');
+    else exportToCSV(data, `InfiMart_PreBookingOrders_${dateStr}`);
   };
 
   return (
@@ -442,7 +442,7 @@ export const PreBookingTab: React.FC<PreBookingTabProps> = ({
       {/* VIEW 2: CUSTOMER PRE-BOOKING ORDERS */}
       {activeSubTab === 'orders' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-700">
               <thead className="bg-[#0A4A29]/5 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
                 <tr>
@@ -538,6 +538,92 @@ export const PreBookingTab: React.FC<PreBookingTabProps> = ({
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards View (100% Mobile Friendly, Zero Horizontal Scroll) */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {preBookingOrders.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-sm">
+                কোনো প্রি-বুকিং অর্ডার জমা পড়েনি।
+              </div>
+            ) : (
+              preBookingOrders.map((order) => (
+                <div key={order.id} className="p-4 space-y-3 hover:bg-slate-50 transition">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-slate-500">
+                      {order.createdAt ? order.createdAt.split('T')[0] : '—'}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                        order.status === 'Confirmed'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : order.status === 'Cancelled'
+                          ? 'bg-rose-100 text-rose-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {order.status === 'Confirmed'
+                        ? 'নিশ্চিত'
+                        : order.status === 'Cancelled'
+                        ? 'বাতিল'
+                        : 'অপেক্ষমাণ'}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 text-sm">{order.customerName}</span>
+                      <a
+                        href={`tel:${order.phone}`}
+                        className="inline-flex items-center gap-1 text-xs font-mono font-bold text-[#1E8A52] bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 min-h-[32px]"
+                      >
+                        <Phone className="w-3 h-3" />
+                        <span>{order.phone}</span>
+                      </a>
+                    </div>
+                    {order.address && (
+                      <p className="text-xs text-slate-500 leading-relaxed">📍 {order.address}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
+                    <div>
+                      <span className="font-bold text-slate-800 text-sm block">{order.productName}</span>
+                      <span className="text-slate-500">পরিমাণ: {order.quantity} পিস</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-emerald-700 font-bold">অগ্রিম: ৳{order.advanceAmountPaid}</div>
+                      <div className="text-slate-500">বকেয়া: ৳{order.dueAmount}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <div className="text-[11px] text-slate-500 font-mono">
+                      {order.paymentMethod} • TxID: <span className="font-bold text-slate-800">{order.transactionId || 'N/A'}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {order.status !== 'Confirmed' && (
+                        <button
+                          onClick={() => handleOrderStatusChange(order.id!, 'Confirmed')}
+                          className="min-h-[40px] px-3 text-xs bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition cursor-pointer"
+                        >
+                          নিশ্চিত
+                        </button>
+                      )}
+                      {order.status !== 'Cancelled' && (
+                        <button
+                          onClick={() => handleOrderStatusChange(order.id!, 'Cancelled')}
+                          className="min-h-[40px] px-3 text-xs bg-rose-100 text-rose-800 rounded-xl font-bold hover:bg-rose-200 transition cursor-pointer"
+                        >
+                          বাতিল
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

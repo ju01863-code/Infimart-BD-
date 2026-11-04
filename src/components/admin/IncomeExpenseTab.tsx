@@ -201,9 +201,9 @@ export const IncomeExpenseTab: React.FC<IncomeExpenseTabProps> = ({
 
     const dateStr = new Date().toISOString().split('T')[0];
     if (format === 'xlsx') {
-      exportToExcel(data, `FeniMart_Income_Expense_${dateStr}`, 'Transactions');
+      exportToExcel(data, `InfiMart_Income_Expense_${dateStr}`, 'Transactions');
     } else {
-      exportToCSV(data, `FeniMart_Income_Expense_${dateStr}`);
+      exportToCSV(data, `InfiMart_Income_Expense_${dateStr}`);
     }
   };
 
@@ -243,7 +243,7 @@ export const IncomeExpenseTab: React.FC<IncomeExpenseTabProps> = ({
             <span>দৈনিক আয়-ব্যয় (Income & Expense)</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            ফেনী মার্টের আর্থিক আয়, খরচ ও নিট মুনাফা ব্যবস্থাপনা
+            InfiMart BD-এর আর্থিক আয়, খরচ ও নিট মুনাফা ব্যবস্থাপনা
           </p>
         </div>
 

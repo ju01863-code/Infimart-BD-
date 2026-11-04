@@ -261,9 +261,9 @@ export const PurchaseTab: React.FC<PurchaseTabProps> = ({
 
     const dateStr = new Date().toISOString().split('T')[0];
     if (format === 'xlsx') {
-      exportToExcel(data, `FeniMart_Purchases_${dateStr}`);
+      exportToExcel(data, `InfiMart_Purchases_${dateStr}`);
     } else {
-      exportToCSV(data, `FeniMart_Purchases_${dateStr}`);
+      exportToCSV(data, `InfiMart_Purchases_${dateStr}`);
     }
   };
 

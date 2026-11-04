@@ -33,13 +33,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onSeedInitialProducts,
 }) => {
   // Store Branding & Admin
-  const [storeName, setStoreName] = useState(settings.storeName || 'FENI MART');
+  const [storeName, setStoreName] = useState(settings.storeName || 'InfiMart BD');
   const [slogan, setSlogan] = useState(settings.slogan || 'সাশ্রয়ের ঠিকানা, ভরসার বাজার');
   const [englishTagline, setEnglishTagline] = useState(
     settings.englishTagline || 'Your Monthly Bazar, Delivered.'
   );
   const [whatsapp, setWhatsapp] = useState(settings.whatsapp || '+880 1821-558813');
-  const [password, setPassword] = useState(settings.password || 'FeniMart@2026');
+  const [password, setPassword] = useState(settings.password || 'Jj0558949360');
   const [address, setAddress] = useState(
     settings.address || 'ট্রাঙ্ক রোড, ফেনী সদর, ফেনী - ৩৯০০, বাংলাদেশ'
   );
@@ -88,7 +88,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   );
   const [bankDetails, setBankDetails] = useState<string>(
     settings.bankDetails ||
-      'ব্যাংক: ইসলামী ব্যাংক বাংলাদেশ লিমিটেড\nশাখা: ফেনী শাখা\nঅ্যাকাউন্ট নাম: Feni Mart\nহিসাব নম্বর: ২০৫০১৪৫০২০০০০০০০০\nরাউটিং নম্বর: ১২৫২৬০৭৮'
+      'ব্যাংক: ইসলামী ব্যাংক বাংলাদেশ লিমিটেড\nশাখা: ফেনী শাখা\nঅ্যাকাউন্ট নাম: InfiMart BD\nহিসাব নম্বর: ২০৫০১৪৫০২০০০০০০০০\nরাউটিং নম্বর: ১২৫২৬০৭৮'
   );
   const [advanceAmountType, setAdvanceAmountType] = useState<'full' | 'half' | 'fixed'>(
     settings.advanceAmountType || 'full'
@@ -99,7 +99,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   // Messenger & Direct Order Channels
   const [messengerUsername, setMessengerUsername] = useState<string>(
-    settings.messengerUsername || 'fenimartbd'
+    settings.messengerUsername || 'infimartbd'
   );
   const [messengerEnabled, setMessengerEnabled] = useState<boolean>(
     settings.messengerEnabled !== false
@@ -114,7 +114,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     settings.primaryPhone || '01821558813'
   );
   const [messengerGreeting, setMessengerGreeting] = useState<string>(
-    settings.messengerGreeting || 'স্বাগতম! Feni Mart-এ অর্ডার করতে চাইলে পণ্যের নাম লিখুন।'
+    settings.messengerGreeting || 'স্বাগতম! InfiMart BD-তে অর্ডার করতে চাইলে পণ্যের নাম লিখুন।'
   );
 
   const [saving, setSaving] = useState(false);
@@ -178,7 +178,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   const handleSeed = async () => {
-    if (window.confirm('আপনি কি ফেনী মার্টের প্রিমিয়াম নমুনা গ্রোসারি পণ্যসমূহ ক্যাটালগে যুক্ত করতে চান?')) {
+    if (window.confirm('আপনি কি InfiMart BD-এর প্রিমিয়াম নমুনা গ্রোসারি পণ্যসমূহ ক্যাটালগে যুক্ত করতে চান?')) {
       try {
         setSeedLoading(true);
         await onSeedInitialProducts();
@@ -623,7 +623,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="FeniMart@2026"
+                placeholder="Jj0558949360"
                 className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#1E8A52]"
               />
             </div>
@@ -636,7 +636,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 type="text"
                 value={storeName}
                 onChange={(e) => setStoreName(e.target.value)}
-                placeholder="FENI MART"
+                placeholder="InfiMart BD"
                 className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E8A52]"
               />
             </div>
@@ -803,12 +803,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   required={messengerEnabled}
                   value={messengerUsername}
                   onChange={(e) => setMessengerUsername(e.target.value.replace(/^https?:\/\/(www\.)?(m\.me|facebook\.com)\//, '').replace(/\/$/, ''))}
-                  placeholder="fenimartbd"
+                  placeholder="infimartbd"
                   className="w-full pl-16 pr-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0084FF]"
                 />
               </div>
               <span className="text-[11px] text-slate-400 mt-1 block">
-                যেমন: <strong>fenimartbd</strong> (লিংক হবে: https://m.me/fenimartbd)
+                যেমন: <strong>infimartbd</strong> (লিংক হবে: https://m.me/infimartbd)
               </span>
             </div>
 
@@ -843,7 +843,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               rows={2}
               value={messengerGreeting}
               onChange={(e) => setMessengerGreeting(e.target.value)}
-              placeholder="স্বাগতম! Feni Mart-এ অর্ডার করতে চাইলে পণ্যের নাম লিখুন।"
+              placeholder="স্বাগতম! InfiMart BD-তে অর্ডার করতে চাইলে পণ্যের নাম লিখুন।"
               className="w-full px-3.5 py-2.5 bg-white border border-blue-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0084FF]"
             />
             <p className="text-[11px] text-blue-800 leading-relaxed">

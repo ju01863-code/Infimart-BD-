@@ -129,8 +129,8 @@ export const Header: React.FC<HeaderProps> = ({
                 <ShoppingBag className="w-4 h-4 text-[#FFB300]" />
               </div>
               <div className="text-lg sm:text-2xl font-black tracking-wider leading-none">
-                <span className="text-white">FENI </span>
-                <span className="text-[#FFB300]">MART</span>
+                <span className="text-white">InfiMart </span>
+                <span className="text-[#FFB300]">BD</span>
               </div>
             </div>
             <p className="text-[10px] sm:text-xs text-[#FFE0A8] font-medium tracking-tight truncate max-w-[220px] sm:max-w-sm mt-0.5">
@@ -143,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Quick WhatsApp Order Icon */}
             <a
               href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-                'আসসালামু আলাইকুম Feni Mart, আমি বাজার অর্ডার করতে চাই।'
+                'আসসালামু আলাইকুম InfiMart BD, আমি বাজার অর্ডার করতে চাই।'
               )}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -196,9 +196,9 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-start gap-2.5">
             <Sparkles className="w-5 h-5 text-[#FFB300] shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-black text-sm text-[#FFB300]">ফেনী মার্ট নোটিফিকেশন</h4>
+              <h4 className="font-black text-sm text-[#FFB300]">InfiMart BD নোটিফিকেশন</h4>
               <p className="text-xs text-slate-100 mt-1 leading-relaxed">
-                ফেনী শহরের যেকোনো স্থানে দ্রুততম সময়ে হোম ডেলিভারি পাওয়া যাচ্ছে। সকাল ৮টা থেকে রাত ১০টা পর্যন্ত সার্ভিস চালু।
+                আপনার ঠিকানায় দ্রুততম সময়ে ফ্রেশ গ্রোসারি হোম ডেলিভারি পৌঁছে দেওয়া হচ্ছে। সকাল ৮টা থেকে রাত ১০টা পর্যন্ত সার্ভিস চালু।
               </p>
             </div>
             <button
@@ -237,7 +237,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <ShoppingBag className="w-5 h-5 text-[#FFB300]" />
                 </div>
                 <div>
-                  <h3 className="font-black text-lg text-white leading-tight">FENI MART</h3>
+                  <h3 className="font-black text-lg text-white leading-tight">InfiMart BD</h3>
                   <p className="text-[11px] text-[#FFE0A8] font-medium">মেনু নেভিগেশন</p>
                 </div>
               </div>

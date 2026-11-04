@@ -160,8 +160,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   // Session authentication check (valid for 24 hours)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    const token = localStorage.getItem('fenimart_secure_token');
-    const authTime = localStorage.getItem('fenimart_secure_timestamp');
+    const token = localStorage.getItem('infimart_secure_token') || localStorage.getItem('fenimart_secure_token');
+    const authTime = localStorage.getItem('infimart_secure_timestamp') || localStorage.getItem('fenimart_secure_timestamp');
     if (token === 'valid' && authTime) {
       const elapsed = Date.now() - Number(authTime);
       if (elapsed < SESSION_DURATION_MS) {
@@ -169,6 +169,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       }
     }
     // Expired or missing
+    localStorage.removeItem('infimart_secure_token');
+    localStorage.removeItem('infimart_secure_timestamp');
     localStorage.removeItem('fenimart_secure_token');
     localStorage.removeItem('fenimart_secure_timestamp');
     return false;
@@ -179,27 +181,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [loginError, setLoginError] = useState('');
   const [currentTab, setCurrentTab] = useState<string>('inbox');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [firestorePassword, setFirestorePassword] = useState<string>('FeniMart@2026');
+  const [firestorePassword, setFirestorePassword] = useState<string>('Jj0558949360');
 
   // Clear any existing lockout keys & sync Firestore settings/admin password
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('fenimart_failed_attempts');
       localStorage.removeItem('fenimart_lockout_until');
+      localStorage.removeItem('infimart_failed_attempts');
+      localStorage.removeItem('infimart_lockout_until');
     }
 
     const adminDocRef = doc(db, 'settings', 'admin');
 
-    // Ensure Firestore settings/admin is updated with password: "FeniMart@2026"
-    const resetDone = localStorage.getItem('fenimart_admin_pw_reset_v2026');
+    // Ensure Firestore settings/admin is updated with password: "Jj0558949360"
+    const resetDone = localStorage.getItem('infimart_admin_pw_reset_v2026_jj0558949360');
     if (resetDone !== 'true') {
       setDoc(
         adminDocRef,
-        { password: 'FeniMart@2026', updatedAt: new Date().toISOString() },
+        { password: 'Jj0558949360', updatedAt: new Date().toISOString() },
         { merge: true }
       )
         .then(() => {
-          localStorage.setItem('fenimart_admin_pw_reset_v2026', 'true');
+          localStorage.setItem('infimart_admin_pw_reset_v2026_jj0558949360', 'true');
         })
         .catch((err) => console.warn('Failed to reset settings/admin password:', err));
     }
@@ -215,7 +219,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         } else {
           setDoc(
             adminDocRef,
-            { password: 'FeniMart@2026', updatedAt: new Date().toISOString() },
+            { password: 'Jj0558949360', updatedAt: new Date().toISOString() },
             { merge: true }
           ).catch(() => {});
         }
@@ -279,7 +283,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     });
   }, [props.orders, isAuthenticated, soundEnabled]);
 
-  const effectivePassword = firestorePassword || props.settings.password || 'FeniMart@2026';
+  const effectivePassword = firestorePassword || props.settings.password || 'Jj0558949360';
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,13 +291,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
     if (
       trimmedInput === effectivePassword ||
-      trimmedInput === 'FeniMart@2026'
+      trimmedInput === 'Jj0558949360'
     ) {
       setIsAuthenticated(true);
+      localStorage.setItem('infimart_secure_token', 'valid');
+      localStorage.setItem('infimart_secure_timestamp', String(Date.now()));
       localStorage.setItem('fenimart_secure_token', 'valid');
       localStorage.setItem('fenimart_secure_timestamp', String(Date.now()));
       localStorage.removeItem('fenimart_failed_attempts');
       localStorage.removeItem('fenimart_lockout_until');
+      localStorage.removeItem('infimart_failed_attempts');
+      localStorage.removeItem('infimart_lockout_until');
       setLoginError('');
       requestNotificationPermission().catch(() => {});
     } else {
@@ -303,6 +311,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    localStorage.removeItem('infimart_secure_token');
+    localStorage.removeItem('infimart_secure_timestamp');
     localStorage.removeItem('fenimart_secure_token');
     localStorage.removeItem('fenimart_secure_timestamp');
     setInputPassword('');
@@ -353,13 +363,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
             <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-[#0A4A29] flex items-center justify-center mx-auto mb-3 shadow-xs border border-emerald-100">
               <ShieldCheck className="w-7 h-7 text-[#0A4A29]" />
             </div>
-            {/* Title: "Secure Access" */}
+            {/* Title: InfiMart BD Admin Access */}
             <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
-              Secure Access
+              InfiMart BD Admin Access
             </h2>
-            {/* Bengali Subtitle: "নিরাপত্তা যাচাই" */}
+            {/* Bengali Subtitle */}
             <p className="text-xs text-slate-500 mt-1 font-semibold">
-              নিরাপত্তা যাচাই
+              নিরাপত্তা যাচাই ও অ্যাডমিন প্রবেশ
             </p>
           </div>
 
@@ -443,8 +453,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
               className="flex items-center gap-2 cursor-pointer select-none"
             >
               <div className="text-xl sm:text-2xl font-black tracking-wider leading-none">
-                <span className="text-white">FENI </span>
-                <span className="text-[#FFB300]">MART</span>
+                <span className="text-white">InfiMart </span>
+                <span className="text-[#FFB300]">BD</span>
               </div>
               <span className="hidden sm:inline-block bg-[#1E8A52] text-[10px] font-bold px-2 py-0.5 rounded text-[#FFE0A8] uppercase tracking-wider border border-[#FFB300]/30">
                 অ্যাডমিন

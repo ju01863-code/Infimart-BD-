@@ -100,7 +100,7 @@ export const OrderInboxTab: React.FC<OrderInboxTabProps> = ({
     if (perm === 'granted') {
       showToast('ব্রাউজার নোটিফিকেশন সফলভাবে চালু হয়েছে!', 'success');
       triggerBrowserNotification(
-        '🔔 Feni Mart নোটিফিকেশন সক্রিয়',
+        '🔔 InfiMart BD নোটিফিকেশন সক্রিয়',
         'নতুন অর্ডার আসলে তাৎক্ষণিক বিজ্ঞপ্তি পাবেন।'
       );
     } else {
@@ -496,7 +496,7 @@ export const OrderInboxTab: React.FC<OrderInboxTabProps> = ({
     }));
 
     const dateStr = new Date().toISOString().slice(0, 7); // YYYY-MM
-    const fileName = `FeniMart_Orders_${dateStr}`;
+    const fileName = `InfiMart_Orders_${dateStr}`;
     if (format === 'xlsx') {
       exportToExcel(data, fileName);
     } else {
@@ -1202,7 +1202,7 @@ export const OrderInboxTab: React.FC<OrderInboxTabProps> = ({
                     {phone && (
                       <a
                         href={`https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                          `আসসালামু আলাইকুম ${order.customerName} ভাই/আপু, Feni Mart থেকে আপনার ${prodName} এর অর্ডার (${shortId}) কনফার্ম করতে যোগাযোগ করছি।`
+                          `আসসালামু আলাইকুম ${order.customerName} ভাই/আপু, InfiMart BD থেকে আপনার ${prodName} এর অর্ডার (${shortId}) কনফার্ম করতে যোগাযোগ করছি।`
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"

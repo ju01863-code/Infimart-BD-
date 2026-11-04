@@ -126,13 +126,13 @@ export const GiftTrackingTab: React.FC<GiftTrackingTabProps> = ({
   ) => {
     const cleanPhone = customer.phone.replace(/[^0-9]/g, '');
     const message = `আসসালামু আলাইকুম ${customer.name} ভাই/আপু,
-${settings.storeName || 'Feni Mart'}-এ শীর্ষ ${rank} নম্বর সেরা কাস্টমার হওয়ার জন্য আপনাকে আন্তরিক ধন্যবাদ ও মোবারকবাদ! 🎉
+${settings.storeName || 'InfiMart BD'}-এ শীর্ষ ${rank} নম্বর সেরা কাস্টমার হওয়ার জন্য আপনাকে আন্তরিক ধন্যবাদ ও মোবারকবাদ! 🎉
 
 আপনার সর্বমোট কেনাকাটা: ৳ ${totalSpent.toLocaleString('en-US')}
-আপনার আন্তরিক ভালোবাসায় আমাদের পথচলা। আপনার জন্য Feni Mart-এর পক্ষ থেকে রয়েছে একটি বিশেষ শুভেচ্ছা উপহার।
+আপনার আন্তরিক ভালোবাসায় আমাদের পথচলা। আপনার জন্য InfiMart BD-এর পক্ষ থেকে রয়েছে একটি বিশেষ শুভেচ্ছা উপহার।
 উপহারটি অতি শীঘ্রই আপনার ঠিকানায় পৌঁছে দেয়া হবে।
 
-সাশ্রয়ের ঠিকানা, ভরসার বাজার — Feni Mart`;
+সাশ্রয়ের ঠিকানা, ভরসার বাজার — InfiMart BD`;
 
     // Record gift in Firestore to prevent duplicate gifts in the same month
     if (customer.id) {
@@ -184,9 +184,9 @@ ${settings.storeName || 'Feni Mart'}-এ শীর্ষ ${rank} নম্বর
 
     const dateStr = new Date().toISOString().split('T')[0];
     if (format === 'xlsx') {
-      exportToExcel(data, `FeniMart_Top_Customers_${periodFilter}_${dateStr}`);
+      exportToExcel(data, `InfiMart_Top_Customers_${periodFilter}_${dateStr}`);
     } else {
-      exportToCSV(data, `FeniMart_Top_Customers_${periodFilter}_${dateStr}`);
+      exportToCSV(data, `InfiMart_Top_Customers_${periodFilter}_${dateStr}`);
     }
   };
 
@@ -348,7 +348,7 @@ ${settings.storeName || 'Feni Mart'}-এ শীর্ষ ${rank} নম্বর
 
       {/* Ranked Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-700">
             <thead className="bg-[#0A4A29]/5 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
               <tr>
@@ -445,6 +445,94 @@ ${settings.storeName || 'Feni Mart'}-এ শীর্ষ ${rank} নম্বর
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards View (100% Mobile Friendly, Zero Horizontal Scroll) */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {rankedCustomers.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm">
+              কোনো কাস্টমার এই ফিল্টারে পাওয়া যায়নি।
+            </div>
+          ) : (
+            rankedCustomers.map((item, idx) => (
+              <div key={item.customer.id || item.customer.phone} className="p-4 space-y-3 hover:bg-slate-50 transition">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-black text-xs ${
+                        idx === 0
+                          ? 'bg-[#FFB300] text-[#0A4A29]'
+                          : idx === 1
+                          ? 'bg-slate-300 text-slate-800'
+                          : idx === 2
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      #{idx + 1}
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm">{item.customer.name}</h4>
+                      <p className="text-xs text-slate-500">{item.customer.phone}</p>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                      item.isGiftedThisMonth
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {item.isGiftedThisMonth ? (
+                      <CheckCircle className="w-3 h-3 text-purple-600" />
+                    ) : (
+                      <AlertCircle className="w-3 h-3 text-slate-400" />
+                    )}
+                    <span>{item.isGiftedThisMonth ? 'উপহার সম্পন্ন' : 'উপহার বাকি'}</span>
+                  </span>
+                </div>
+
+                {item.customer.address && (
+                  <p className="text-xs text-slate-500">
+                    📍 {item.customer.address}
+                  </p>
+                )}
+
+                <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
+                  <div>
+                    <span className="text-slate-500">মোট অর্ডার: </span>
+                    <span className="font-bold text-slate-800">{item.totalOrdersCount} টি</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">মোট ক্রয়: </span>
+                    <span className="font-black text-[#0A4A29] text-sm">৳{item.totalAmount.toLocaleString('en-US')}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <span className="text-[11px] text-slate-400">সর্বশেষ: {item.lastOrderDate}</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSendGiftWhatsApp(item.customer, item.totalAmount, idx + 1)}
+                      className="min-h-[44px] px-3.5 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <MessageCircle className="w-4 h-4 fill-white" />
+                      <span>গিফট পাঠান</span>
+                    </button>
+                    {!item.isGiftedThisMonth && (
+                      <button
+                        onClick={() => handleMarkAsSent(item.customer, idx + 1, item.totalAmount)}
+                        className="min-h-[44px] px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
+                      >
+                        মার্ক
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

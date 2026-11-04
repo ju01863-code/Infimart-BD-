@@ -49,5 +49,8 @@ service cloud.firestore {
     match /reviews/{document=**} {
       allow read, write: if true;
     }
+    match /uploaded_images/{document=**} {
+      allow read, write: if true;
+    }
   }
 }

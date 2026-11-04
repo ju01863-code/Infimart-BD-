@@ -45,7 +45,7 @@ export const ExcelExportTab: React.FC<ExcelExportTabProps> = ({
       পেমেন্ট_পদ্ধতি: t.paymentMethod,
       মন্তব্য: t.notes || '',
     }));
-    const filename = `FeniMart_Income_Expense_${selectedMonth}`;
+    const filename = `InfiMart_Income_Expense_${selectedMonth}`;
     if (format === 'xlsx') exportToExcel(data, filename, 'Income_Expense');
     else exportToCSV(data, filename);
     showNotification('আয়-ব্যয় রিপোর্ট ডাউনলোড সম্পন্ন হয়েছে!');
@@ -65,7 +65,7 @@ export const ExcelExportTab: React.FC<ExcelExportTabProps> = ({
       বকেয়া_টাকা: p.due,
       মন্তব্য: p.notes || '',
     }));
-    const filename = `FeniMart_Purchases_${selectedMonth}`;
+    const filename = `InfiMart_Purchases_${selectedMonth}`;
     if (format === 'xlsx') exportToExcel(data, filename, 'Purchases');
     else exportToCSV(data, filename);
     showNotification('ক্রয় রিপোর্ট ডাউনলোড সম্পন্ন হয়েছে!');
@@ -86,7 +86,7 @@ export const ExcelExportTab: React.FC<ExcelExportTabProps> = ({
       পেমেন্ট: o.paymentMethod,
       অবস্থা: o.status,
     }));
-    const filename = `FeniMart_Sales_${selectedMonth}`;
+    const filename = `InfiMart_Sales_${selectedMonth}`;
     if (format === 'xlsx') exportToExcel(data, filename, 'Sales');
     else exportToCSV(data, filename);
     showNotification('বিক্রয় রিপোর্ট ডাউনলোড সম্পন্ন হয়েছে!');
@@ -105,7 +105,7 @@ export const ExcelExportTab: React.FC<ExcelExportTabProps> = ({
       মোট_কেনাকাটা_টাকা: c.totalPurchase,
       উপহার_অবস্থা: c.giftStatus,
     }));
-    const filename = `FeniMart_Customers_${selectedMonth}`;
+    const filename = `InfiMart_Customers_${selectedMonth}`;
     if (format === 'xlsx') exportToExcel(data, filename, 'Customers');
     else exportToCSV(data, filename);
     showNotification('কাস্টমার ডাটাবেজ ডাউনলোড সম্পন্ন হয়েছে!');
@@ -134,7 +134,7 @@ export const ExcelExportTab: React.FC<ExcelExportTabProps> = ({
       { মেট্রিক: 'সাপ্লায়ারদের মোট বকেয়া', তথ্য: monthPurchases.reduce((s, p) => s + Number(p.due || 0), 0) },
     ];
 
-    exportToExcel(data, `FeniMart_Monthly_Summary_${selectedMonth}`, 'Monthly_Summary');
+    exportToExcel(data, `InfiMart_Monthly_Summary_${selectedMonth}`, 'Monthly_Summary');
     showNotification('মাসিক সারসংক্ষেপ ডাউনলোড সম্পন্ন হয়েছে!');
   };
 
@@ -192,7 +192,7 @@ export const ExcelExportTab: React.FC<ExcelExportTabProps> = ({
 
     const summaryData = [
       { বিবরণ: 'তৈরির তারিখ', মান: new Date().toISOString() },
-      { বিবরণ: 'স্টোর নাম', মান: 'FENI MART' },
+      { বিবরণ: 'স্টোর নাম', মান: 'InfiMart BD' },
       { বিবরণ: 'সর্বমোট আয়', মান: totalInc },
       { বিবরণ: 'সর্বমোট ব্যয়', মান: totalExp },
       { বিবরণ: 'নিট লাভ', মান: totalInc - totalExp },
@@ -209,7 +209,7 @@ export const ExcelExportTab: React.FC<ExcelExportTabProps> = ({
         { sheetName: 'Income_Expense', data: txData },
         { sheetName: 'Customers', data: customerData },
       ],
-      `FeniMart_Full_Report_${selectedMonth}`
+      `InfiMart_Full_Report_${selectedMonth}`
     );
 
     showNotification('সব শিটসহ পূর্ণাঙ্গ এক্সেল ফাইল ডাউনলোড সম্পন্ন হয়েছে!');
@@ -264,7 +264,7 @@ export const ExcelExportTab: React.FC<ExcelExportTabProps> = ({
               একটি এক্সেল ফাইলের ভেতর আলাদা আলাদা শিটে (Summary, Sales, Purchases, Income & Expense, Customers) সকল ডাটা সুসজ্জিতভাবে সংরক্ষিত থাকবে।
             </p>
             <p className="text-xs text-[#FFE0A8] font-mono mt-2">
-              ফাইলের নাম: FeniMart_Full_Report_{selectedMonth}.xlsx
+              ফাইলের নাম: InfiMart_Full_Report_{selectedMonth}.xlsx
             </p>
           </div>
 

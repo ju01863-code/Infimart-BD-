@@ -177,12 +177,12 @@ export interface StoreSettings {
   advanceAmountType?: 'full' | 'half' | 'fixed'; // 'full' = 100%, 'half' = 50%, 'fixed' = fixed amount
   advanceFixedAmount?: number; // e.g. 200
   // Direct Order Channels & Messenger Settings
-  messengerUsername?: string; // e.g. "fenimartbd"
+  messengerUsername?: string; // e.g. "infimartbd"
   messengerEnabled?: boolean; // default true: Enable/Disable Messenger ordering
   whatsappEnabled?: boolean; // default true: Enable/Disable WhatsApp ordering
   callEnabled?: boolean; // default true: Enable/Disable Call button
   primaryPhone?: string; // e.g. "01821558813"
-  messengerGreeting?: string; // e.g. "স্বাগতম! Feni Mart-এ অর্ডার করতে চাইলে পণ্যের নাম লিখুন।"
+  messengerGreeting?: string; // e.g. "স্বাগতম! InfiMart BD-তে অর্ডার করতে চাইলে পণ্যের নাম লিখুন।"
   defaultLowStockThreshold?: number; // ডিফল্ট রিস্টক থ্রেশহোল্ড (default: 5)
 }
 

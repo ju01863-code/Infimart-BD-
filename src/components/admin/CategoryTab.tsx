@@ -303,9 +303,9 @@ export const CategoryTab: React.FC<CategoryTabProps> = ({
 
     const dateStr = new Date().toISOString().split('T')[0];
     if (format === 'xlsx') {
-      exportToExcel(data, `FeniMart_Categories_${dateStr}`, 'Categories');
+      exportToExcel(data, `InfiMart_Categories_${dateStr}`, 'Categories');
     } else {
-      exportToCSV(data, `FeniMart_Categories_${dateStr}`);
+      exportToCSV(data, `InfiMart_Categories_${dateStr}`);
     }
   };
 

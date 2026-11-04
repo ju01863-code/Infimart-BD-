@@ -234,7 +234,7 @@ export const MonthlyDeliveredSalesReport: React.FC<MonthlyDeliveredSalesReportPr
 
     exportToExcel(
       rows,
-      `FeniMart_Delivered_Monthly_Sales_${new Date().toISOString().split('T')[0]}`
+      `InfiMart_Delivered_Monthly_Sales_${new Date().toISOString().split('T')[0]}`
     );
   };
 

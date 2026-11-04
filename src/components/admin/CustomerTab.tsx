@@ -254,9 +254,9 @@ export const CustomerTab: React.FC<CustomerTabProps> = ({
 
     const dateStr = new Date().toISOString().split('T')[0];
     if (format === 'xlsx') {
-      exportToExcel(data, `FeniMart_Customers_${dateStr}`, 'Customers');
+      exportToExcel(data, `InfiMart_Customers_${dateStr}`, 'Customers');
     } else {
-      exportToCSV(data, `FeniMart_Customers_${dateStr}`);
+      exportToCSV(data, `InfiMart_Customers_${dateStr}`);
     }
   };
 
@@ -990,7 +990,7 @@ export const CustomerTab: React.FC<CustomerTabProps> = ({
                   ) : (
                     <div className="text-xs text-purple-800 font-bold flex items-center gap-1.5">
                       <Crown className="w-4 h-4 text-purple-600" />
-                      <span>অভিনন্দন! এই গ্রাহক ফেনী মার্টের সর্বোচ্চ প্ল্যাটিনাম ভিআইপি স্তরে অবস্থান করছেন।</span>
+                      <span>অভিনন্দন! এই গ্রাহক InfiMart BD-এর সর্বোচ্চ প্ল্যাটিনাম ভিআইপি স্তরে অবস্থান করছেন।</span>
                     </div>
                   )}
                 </div>

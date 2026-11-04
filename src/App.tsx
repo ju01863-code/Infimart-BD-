@@ -39,7 +39,9 @@ export default function App() {
   // Determine initial view based on URL / page flag
   const [currentView, setCurrentView] = useState<'store' | 'admin'>(() => {
     if (typeof window !== 'undefined') {
-      const isWindowAdmin = (window as unknown as { FENI_MART_PAGE?: string }).FENI_MART_PAGE === 'admin';
+      const isWindowAdmin =
+        (window as unknown as { INFIMART_PAGE?: string; FENI_MART_PAGE?: string }).INFIMART_PAGE === 'admin' ||
+        (window as unknown as { INFIMART_PAGE?: string; FENI_MART_PAGE?: string }).FENI_MART_PAGE === 'admin';
       const isPathAdmin = window.location.pathname.includes('admin');
       const isSearchAdmin = window.location.search.includes('admin') || window.location.hash.includes('admin');
       return isWindowAdmin || isPathAdmin || isSearchAdmin ? 'admin' : 'store';
@@ -86,22 +88,22 @@ export default function App() {
     const settingsDocRef = doc(db, 'settings', 'contact');
     const adminDocRef = doc(db, 'settings', 'admin');
 
-    // One-time admin password reset to "FeniMart@2026" in Firestore settings/admin
-    const resetFlag = localStorage.getItem('fenimart_pw_reset_2026_v1');
+    // One-time admin password reset to "Jj0558949360" in Firestore settings/admin
+    const resetFlag = localStorage.getItem('infimart_admin_pw_reset_v2026_jj0558949360');
     if (resetFlag !== 'done') {
       setDoc(
         adminDocRef,
-        { password: 'FeniMart@2026', updatedAt: new Date().toISOString() },
+        { password: 'Jj0558949360', updatedAt: new Date().toISOString() },
         { merge: true }
       )
         .then(() => {
-          localStorage.setItem('fenimart_pw_reset_2026_v1', 'done');
+          localStorage.setItem('infimart_admin_pw_reset_v2026_jj0558949360', 'done');
         })
         .catch((err) => console.warn('Could not reset settings/admin doc:', err));
 
       setDoc(
         settingsDocRef,
-        { password: 'FeniMart@2026' },
+        { storeName: 'InfiMart BD', password: 'Jj0558949360' },
         { merge: true }
       ).catch(() => {});
     }
@@ -114,8 +116,9 @@ export default function App() {
           setSettings((prev) => ({
             ...prev,
             ...contactData,
+            storeName: contactData.storeName || 'InfiMart BD',
             // Keep password controlled by settings/admin
-            password: prev.password || contactData.password || 'FeniMart@2026',
+            password: prev.password || contactData.password || 'Jj0558949360',
           }));
         } else {
           // Initialize settings document if it doesn't exist
@@ -139,10 +142,10 @@ export default function App() {
             }));
           }
         } else {
-          // Ensure settings/admin always exists with FeniMart@2026
+          // Ensure settings/admin always exists with Jj0558949360
           setDoc(
             adminDocRef,
-            { password: 'FeniMart@2026', updatedAt: new Date().toISOString() },
+            { password: 'Jj0558949360', updatedAt: new Date().toISOString() },
             { merge: true }
           ).catch((err) => console.warn('Could not seed settings/admin:', err));
         }
@@ -821,7 +824,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 w-full max-w-full overflow-x-hidden">
       {/* Header (Mobile-first with Hamburger drawer, compact 56px height, responsive) */}
       <Header
         currentView={currentView}

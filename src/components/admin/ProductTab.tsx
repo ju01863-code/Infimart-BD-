@@ -56,7 +56,7 @@ export const ProductTab: React.FC<ProductTabProps> = ({
   // Restock Threshold & Stock Filter State
   const [globalThreshold, setGlobalThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('fenimart_stock_threshold');
+      const saved = localStorage.getItem('infimart_stock_threshold') || localStorage.getItem('fenimart_stock_threshold');
       if (saved && !isNaN(Number(saved))) return Number(saved);
     }
     return settings?.defaultLowStockThreshold || 5;
@@ -186,6 +186,7 @@ export const ProductTab: React.FC<ProductTabProps> = ({
     const validVal = Math.max(1, Math.min(999, newVal));
     setGlobalThreshold(validVal);
     if (typeof window !== 'undefined') {
+      localStorage.setItem('infimart_stock_threshold', String(validVal));
       localStorage.setItem('fenimart_stock_threshold', String(validVal));
     }
     if (onUpdateSettings) {
@@ -431,9 +432,9 @@ export const ProductTab: React.FC<ProductTabProps> = ({
 
     const dateStr = new Date().toISOString().split('T')[0];
     if (format === 'xlsx') {
-      exportToExcel(data, `FeniMart_Products_${dateStr}`, 'Products');
+      exportToExcel(data, `InfiMart_Products_${dateStr}`, 'Products');
     } else {
-      exportToCSV(data, `FeniMart_Products_${dateStr}`);
+      exportToCSV(data, `InfiMart_Products_${dateStr}`);
     }
   };
 

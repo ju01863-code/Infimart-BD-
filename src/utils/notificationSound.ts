@@ -101,7 +101,7 @@ export function triggerBrowserNotification(title: string, body: string, onClick?
       body,
       icon: '/favicon.ico',
       badge: '/favicon.ico',
-      tag: 'fenimart-order-notification',
+      tag: 'infimart-order-notification',
     });
 
     notification.onclick = () => {

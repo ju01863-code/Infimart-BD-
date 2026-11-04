@@ -283,7 +283,7 @@ export const CustomerStore: React.FC<CustomerStoreProps> = ({
     : '8801821558813';
 
   // Normalize Messenger username and call phone
-  const messengerUser = (settings.messengerUsername || 'fenimartbd')
+  const messengerUser = (settings.messengerUsername || 'infimartbd')
     .trim()
     .replace(/^https?:\/\/(www\.)?(m\.me|facebook\.com)\//, '')
     .replace(/\/$/, '');
@@ -314,7 +314,7 @@ export const CustomerStore: React.FC<CustomerStoreProps> = ({
   // Pre-filled Messenger Message Generator (Official exact template)
   const getProductMessengerUrl = (prod: { name: string; unit: string }, price: number, qtyVal = 1) => {
     const totalVal = price * qtyVal;
-    const msg = `আসসালামু আলাইকুম Feni Mart,
+    const msg = `আসসালামু আলাইকুম InfiMart BD,
 
 আমি এই পণ্যটি অর্ডার করতে চাই:
 
@@ -335,7 +335,7 @@ export const CustomerStore: React.FC<CustomerStoreProps> = ({
   // Pre-filled WhatsApp Message Generator
   const getProductWhatsAppUrl = (prod: { name: string; unit: string }, price: number, qtyVal = 1) => {
     const totalVal = price * qtyVal;
-    const msg = `আসসালামু আলাইকুম Feni Mart,
+    const msg = `আসসালামু আলাইকুম InfiMart BD,
 
 আমি এই পণ্যটি অর্ডার করতে চাই:
 
@@ -603,7 +603,7 @@ export const CustomerStore: React.FC<CustomerStoreProps> = ({
       priceLine = `💰 দাম: ~~৳${discountInfo.originalPrice}~~ ৳${discountInfo.discountedPrice} / ${product.unit} (${discountText})`;
     }
 
-    const message = `আসসালামু আলাইকুম Feni Mart,
+    const message = `আসসালামু আলাইকুম InfiMart BD,
 
 আমি এই পণ্যটি অর্ডার করতে চাই:
 
@@ -630,7 +630,7 @@ ${priceLine}
     const savings =
       pkg.discount || Math.max(0, (pkg.originalPrice || 0) - (pkg.packagePrice || 0));
 
-    const message = `আসসালামু আলাইকুম Feni Mart,
+    const message = `আসসালামু আলাইকুম InfiMart BD,
 
 আমি এই প্যাকেজটি অর্ডার করতে চাই:
 
@@ -652,7 +652,7 @@ ${priceLine}
 
   // Daily flash deals
   const handleDealWhatsAppOrder = (deal: DailyDeal) => {
-    const message = `আসসালামু আলাইকুম Feni Mart,
+    const message = `আসসালামু আলাইকুম InfiMart BD,
 
 আমি আজকের ডিলের এই পণ্যটি অর্ডার করতে চাই:
 
@@ -672,7 +672,7 @@ ${priceLine}
 
   // 4. Pre-booking products
   const handlePreBookingWhatsAppOrder = (camp: PreBookingCampaign) => {
-    const message = `আসসালামু আলাইকুম Feni Mart,
+    const message = `আসসালামু আলাইকুম InfiMart BD,
 
 আমি এই পণ্যটি প্রি-বুকিং করতে চাই:
 
@@ -993,7 +993,7 @@ ${priceLine}
     const countryLine = isAbroadCustomer ? `\n🌍 দেশ: ${orderCountry}` : '';
     const notesText = orderNotes.trim() ? `\n\n📝 নোট: ${orderNotes.trim()}` : '';
 
-    const message = `আসসালামু আলাইকুম Feni Mart,
+    const message = `আসসালামু আলাইকুম InfiMart BD,
 
 🛒 পণ্য: ${selectedProductForOrder.name}
 💰 দাম: ৳${orderUnitPrice} / ${selectedProductForOrder.unit}
@@ -1012,7 +1012,7 @@ ${paymentDetailsText}
 অনুগ্রহ করে অর্ডারটি কনফার্ম করুন।`;
 
     if (orderChannel === 'messenger') {
-      const messengerMsg = `আসসালামু আলাইকুম Feni Mart,
+      const messengerMsg = `আসসালামু আলাইকুম InfiMart BD,
 
 আমি এই পণ্যটি অর্ডার করতে চাই:
 
@@ -1145,7 +1145,7 @@ ${paymentDetailsText}
           ) : (
             <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-semibold text-[#FFE0A8] border border-white/20">
               <Sparkles className="w-3.5 h-3.5 text-[#FFB300]" />
-              <span>ফেনী শহরের নির্ভরযোগ্য অনলাইন বাজার</span>
+              <span>নির্ভরযোগ্য অনলাইন বাজার — বাজারের চেয়ে সাশ্রয়ী দামে!</span>
             </div>
           )}
 
@@ -1740,7 +1740,7 @@ ${paymentDetailsText}
             <div className="pt-2">
               <a
                 href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-                  `আসসালামু আলাইকুম, আমি Feni Mart-এর "${selectedCategoryObj?.name || selectedCategory}" ক্যাটাগরির পণ্য সম্পর্কে জানতে চাই। এই ক্যাটাগরিতে কী কী পণ্য আসবে?`
+                  `আসসালামু আলাইকুম, আমি InfiMart BD-এর "${selectedCategoryObj?.name || selectedCategory}" ক্যাটাগরির পণ্য সম্পর্কে জানতে চাই। এই ক্যাটাগরিতে কী কী পণ্য আসবে?`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -3027,13 +3027,13 @@ ${paymentDetailsText}
 
       {/* Pre-Booking Modal */}
       {selectedCampaignForBooking && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 relative my-4 overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-800 to-indigo-900 text-white p-5 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-100 relative max-h-[94vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-slideUp">
+            <div className="bg-gradient-to-r from-purple-800 to-indigo-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0 border-b border-purple-700">
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-6 h-6 text-[#FFB300]" />
                 <div>
-                  <h3 className="font-bold text-lg leading-tight">পণ্য প্রি-বুকিং ফর্ম</h3>
+                  <h3 className="font-bold text-base sm:text-lg leading-tight">পণ্য প্রি-বুকিং ফর্ম</h3>
                   <p className="text-xs text-purple-200">
                     {selectedCampaignForBooking.productName}
                   </p>
@@ -3041,13 +3041,14 @@ ${paymentDetailsText}
               </div>
               <button
                 onClick={() => setSelectedCampaignForBooking(null)}
-                className="p-1 rounded-full text-white/80 hover:text-white hover:bg-white/10"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-white/80 hover:text-white hover:bg-white/10 cursor-pointer"
+                aria-label="বন্ধ করুন"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto overscroll-contain">
               {bookingSuccessMsg ? (
                 <div className="text-center py-6 space-y-3">
                   <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
@@ -3207,15 +3208,15 @@ ${paymentDetailsText}
           ⭐ PRODUCT REVIEWS & RATINGS MODAL
           ========================================================================= */}
       {selectedProductForReviews && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 relative my-auto max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-100 relative max-h-[94vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-slideUp">
             {/* Header */}
-            <div className="sticky top-0 bg-[#0A4A29] text-white px-5 sm:px-6 py-4 flex items-center justify-between z-20 shrink-0 border-b border-[#FFB300]">
+            <div className="sticky top-0 bg-[#0A4A29] text-white px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between z-20 shrink-0 border-b border-[#FFB300]">
               <div className="flex items-center gap-3 min-w-0 pr-2">
                 <img
                   src={selectedProductForReviews.image || FALLBACK_PRODUCT_IMAGE}
                   alt={selectedProductForReviews.name}
-                  className="w-11 h-11 rounded-xl object-cover border border-white/20 bg-white shrink-0"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-cover border border-white/20 bg-white shrink-0"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = FALLBACK_PRODUCT_IMAGE;
                   }}
@@ -3224,7 +3225,7 @@ ${paymentDetailsText}
                   <span className="text-[10px] font-black uppercase tracking-wider text-[#FFB300] bg-white/10 px-2 py-0.5 rounded">
                     পণ্য রিভিউ ও রেটিং
                   </span>
-                  <h3 className="font-black text-white text-sm sm:text-base truncate mt-0.5">
+                  <h3 className="font-black text-white text-xs sm:text-base truncate mt-0.5">
                     {selectedProductForReviews.name}
                   </h3>
                 </div>
@@ -3232,15 +3233,16 @@ ${paymentDetailsText}
               <button
                 type="button"
                 onClick={closeProductReviewsModal}
-                className="text-white/80 hover:text-white p-2 rounded-xl hover:bg-white/10 transition cursor-pointer shrink-0"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition cursor-pointer shrink-0"
                 title="বন্ধ করুন"
+                aria-label="বন্ধ করুন"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+            <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-4 flex-1">
               {/* Toast Message */}
               {reviewToast && (
                 <div className="bg-emerald-600 text-white p-3.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 border border-emerald-400 shadow-md animate-fadeIn">
@@ -3416,7 +3418,7 @@ ${paymentDetailsText}
                         {rev.adminReply && (
                           <div className="ml-10 bg-emerald-50/80 border border-emerald-200 rounded-xl p-2.5 text-xs text-slate-700 space-y-1">
                             <span className="font-bold text-[#0A4A29] flex items-center gap-1">
-                              <span>🏪 ফেনী মার্ট (কর্তৃপক্ষ):</span>
+                              <span>🏪 InfiMart BD (কর্তৃপক্ষ):</span>
                             </span>
                             <p className="italic text-slate-600">{rev.adminReply}</p>
                           </div>
@@ -3556,7 +3558,7 @@ ${paymentDetailsText}
             {isWhatsappEnabled && (
               <a
                 href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-                  'আসসালামু আলাইকুম Feni Mart,\n\nআমি পণ্য অর্ডার করতে চাই:\n\n🛒 পণ্যের নাম ও বিবরণ: \n🔢 পরিমাণ: \n\n📍 আমার নাম: \n📍 ঠিকানা: \n📞 ফোন: \n\nঅনুগ্রহ করে অর্ডারটি কনফার্ম করুন।'
+                  'আসসালামু আলাইকুম InfiMart BD,\n\nআমি পণ্য অর্ডার করতে চাই:\n\n🛒 পণ্যের নাম ও বিবরণ: \n🔢 পরিমাণ: \n\n📍 আমার নাম: \n📍 ঠিকানা: \n📞 ফোন: \n\nঅনুগ্রহ করে অর্ডারটি কনফার্ম করুন।'
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -3577,7 +3579,7 @@ ${paymentDetailsText}
             {isMessengerEnabled && (
               <a
                 href={`https://m.me/${messengerUser}?text=${encodeURIComponent(
-                  'আসসালামু আলাইকুম Feni Mart,\n\nআমি পণ্য অর্ডার করতে চাই:\n\n🛒 পণ্যের নাম ও বিবরণ: \n🔢 পরিমাণ: \n\n📍 আমার নাম: \n📍 ঠিকানা: \n📞 ফোন: \n\nঅনুগ্রহ করে অর্ডারটি কনফার্ম করুন।'
+                  'আসসালামু আলাইকুম InfiMart BD,\n\nআমি পণ্য অর্ডার করতে চাই:\n\n🛒 পণ্যের নাম ও বিবরণ: \n🔢 পরিমাণ: \n\n📍 আমার নাম: \n📍 ঠিকানা: \n📞 ফোন: \n\nঅনুগ্রহ করে অর্ডারটি কনফার্ম করুন।'
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"

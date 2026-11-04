@@ -228,7 +228,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         পরিমাণ_টাকা: lowStockCount,
       },
     ];
-    exportToExcel(data, `FeniMart_Dashboard_Summary_${todayStr}`);
+    exportToExcel(data, `InfiMart_Dashboard_Summary_${todayStr}`);
   };
 
   return (
@@ -810,34 +810,122 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               কোনো কাস্টমার তথ্য পাওয়া যায়নি
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
-                <thead className="bg-slate-100/70 text-slate-600 font-bold uppercase text-[11px]">
-                  <tr>
-                    <th className="px-4 py-3 text-center">র‍্যাঙ্ক</th>
-                    <th className="px-4 py-3">গ্রাহকের নাম ও ফোন</th>
-                    <th className="px-4 py-3">লয়ালটি স্তর (Tier)</th>
-                    <th className="px-4 py-3 text-right">মোট ক্রয় ভলিউম</th>
-                    <th className="px-4 py-3 text-center">লয়ালটি স্কোর</th>
-                    <th className="px-4 py-3">পরবর্তী স্তর অগ্রগতি</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {loyaltyData.rankedList.slice(0, 5).map((item) => {
-                    const isTop1 = item.rank === 1;
-                    const isTop2 = item.rank === 2;
-                    const isTop3 = item.rank === 3;
-                    return (
-                      <tr
-                        key={item.phone || item.name}
-                        onClick={() => onNavigateTab('customers')}
-                        className={`transition hover:bg-amber-50/40 cursor-pointer ${
-                          isTop1 ? 'bg-amber-50/20 font-semibold' : ''
-                        }`}
-                      >
-                        <td className="px-4 py-3.5 text-center">
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs sm:text-sm">
+                  <thead className="bg-slate-100/70 text-slate-600 font-bold uppercase text-[11px]">
+                    <tr>
+                      <th className="px-4 py-3 text-center">র‍্যাঙ্ক</th>
+                      <th className="px-4 py-3">গ্রাহকের নাম ও ফোন</th>
+                      <th className="px-4 py-3">লয়ালটি স্তর (Tier)</th>
+                      <th className="px-4 py-3 text-right">মোট ক্রয় ভলিউম</th>
+                      <th className="px-4 py-3 text-center">লয়ালটি স্কোর</th>
+                      <th className="px-4 py-3">পরবর্তী স্তর অগ্রগতি</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {loyaltyData.rankedList.slice(0, 5).map((item) => {
+                      const isTop1 = item.rank === 1;
+                      const isTop2 = item.rank === 2;
+                      const isTop3 = item.rank === 3;
+                      return (
+                        <tr
+                          key={item.phone || item.name}
+                          onClick={() => onNavigateTab('customers')}
+                          className={`transition hover:bg-amber-50/40 cursor-pointer ${
+                            isTop1 ? 'bg-amber-50/20 font-semibold' : ''
+                          }`}
+                        >
+                          <td className="px-4 py-3.5 text-center">
+                            <span
+                              className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-black shadow-xs ${
+                                isTop1
+                                  ? 'bg-amber-400 text-amber-950 ring-2 ring-amber-300'
+                                  : isTop2
+                                  ? 'bg-slate-300 text-slate-900 ring-2 ring-slate-200'
+                                  : isTop3
+                                  ? 'bg-orange-300 text-orange-950 ring-2 ring-orange-200'
+                                  : 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {isTop1 ? '👑' : isTop2 ? '🥇' : isTop3 ? '🥈' : item.rankDisplayBangla}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div className="font-bold text-slate-900">{item.name}</div>
+                            <div className="text-slate-500 text-xs flex items-center gap-2">
+                              <span>{item.phone}</span>
+                              <span className="text-[11px] text-slate-400 font-normal">
+                                ({toBanglaDigits(item.totalOrders)} টি অর্ডার)
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${item.tier.bgClass} ${item.tier.textClass} ${item.tier.borderClass}`}
+                            >
+                              <span>{item.tier.badgeEmoji}</span>
+                              <span>{item.tier.labelBn}</span>
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-right font-black text-slate-900">
+                            ৳ {item.totalPurchase.toLocaleString('en-US')}
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            <span className="inline-block bg-[#0A4A29]/10 text-[#0A4A29] px-2.5 py-1 rounded-lg font-black text-xs">
+                              {item.scoreDisplayBangla} পয়েন্ট
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 min-w-[140px]">
+                            {item.nextTier ? (
+                              <div>
+                                <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                                  <span>{item.nextTier.badgeEmoji} {item.nextTier.labelBn}</span>
+                                  <span className="font-bold text-slate-700">{toBanglaDigits(item.progressPercent)}%</span>
+                                </div>
+                                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className="bg-gradient-to-r from-amber-500 to-[#1E8A52] h-2 rounded-full transition-all duration-500"
+                                    style={{ width: `${item.progressPercent}%` }}
+                                  />
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                  আর ৳ {item.amountToNextTier.toLocaleString('en-US')} প্রয়োজন
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-xs text-purple-700 font-bold">
+                                <span>👑</span>
+                                <span>সর্বোচ্চ স্তর অর্জিত</span>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards View (Zero Horizontal Scroll) */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {loyaltyData.rankedList.slice(0, 5).map((item) => {
+                  const isTop1 = item.rank === 1;
+                  const isTop2 = item.rank === 2;
+                  const isTop3 = item.rank === 3;
+                  return (
+                    <div
+                      key={item.phone || item.name}
+                      onClick={() => onNavigateTab('customers')}
+                      className={`p-4 space-y-3 cursor-pointer transition active:bg-slate-50 ${
+                        isTop1 ? 'bg-amber-50/20' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
                           <span
-                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-black shadow-xs ${
+                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-black shrink-0 shadow-xs ${
                               isTop1
                                 ? 'bg-amber-400 text-amber-950 ring-2 ring-amber-300'
                                 : isTop2
@@ -849,62 +937,58 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                           >
                             {isTop1 ? '👑' : isTop2 ? '🥇' : isTop3 ? '🥈' : item.rankDisplayBangla}
                           </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="font-bold text-slate-900">{item.name}</div>
-                          <div className="text-slate-500 text-xs flex items-center gap-2">
-                            <span>{item.phone}</span>
-                            <span className="text-[11px] text-slate-400 font-normal">
-                              ({toBanglaDigits(item.totalOrders)} টি অর্ডার)
-                            </span>
+                          <div>
+                            <div className="font-black text-slate-900 text-sm">{item.name}</div>
+                            <div className="text-slate-500 text-xs">{item.phone}</div>
                           </div>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${item.tier.bgClass} ${item.tier.textClass} ${item.tier.borderClass}`}
-                          >
-                            <span>{item.tier.badgeEmoji}</span>
-                            <span>{item.tier.labelBn}</span>
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-right font-black text-slate-900">
-                          ৳ {item.totalPurchase.toLocaleString('en-US')}
-                        </td>
-                        <td className="px-4 py-3.5 text-center">
-                          <span className="inline-block bg-[#0A4A29]/10 text-[#0A4A29] px-2.5 py-1 rounded-lg font-black text-xs">
-                            {item.scoreDisplayBangla} পয়েন্ট
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 min-w-[140px]">
-                          {item.nextTier ? (
-                            <div>
-                              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
-                                <span>{item.nextTier.badgeEmoji} {item.nextTier.labelBn}</span>
-                                <span className="font-bold text-slate-700">{toBanglaDigits(item.progressPercent)}%</span>
-                              </div>
-                              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="bg-gradient-to-r from-amber-500 to-[#1E8A52] h-2 rounded-full transition-all duration-500"
-                                  style={{ width: `${item.progressPercent}%` }}
-                                />
-                              </div>
-                              <div className="text-[10px] text-slate-400 mt-0.5">
-                                আর ৳ {item.amountToNextTier.toLocaleString('en-US')} প্রয়োজন
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1 text-xs text-purple-700 font-bold">
-                              <span>👑</span>
-                              <span>সর্বোচ্চ স্তর অর্জিত</span>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border shrink-0 ${item.tier.bgClass} ${item.tier.textClass} ${item.tier.borderClass}`}
+                        >
+                          <span>{item.tier.badgeEmoji}</span>
+                          <span>{item.tier.labelBn}</span>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">মোট ক্রয়</span>
+                          <span className="font-black text-slate-900 text-sm">৳{item.totalPurchase.toLocaleString('en-US')}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">লয়ালটি স্কোর</span>
+                          <span className="font-black text-[#0A4A29] text-sm">{item.scoreDisplayBangla} পয়েন্ট</span>
+                        </div>
+                      </div>
+
+                      {item.nextTier ? (
+                        <div className="pt-1">
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                            <span>পরবর্তী: {item.nextTier.badgeEmoji} {item.nextTier.labelBn}</span>
+                            <span className="font-bold text-slate-700">{toBanglaDigits(item.progressPercent)}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                            <div
+                              className="bg-gradient-to-r from-amber-500 to-[#1E8A52] h-2 rounded-full"
+                              style={{ width: `${item.progressPercent}%` }}
+                            />
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-1">
+                            আর ৳ {item.amountToNextTier.toLocaleString('en-US')} প্রয়োজন
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-xs text-purple-700 font-bold">
+                          <span>👑</span>
+                          <span>সর্বোচ্চ স্তর অর্জিত</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>
