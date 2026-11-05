@@ -1,5 +1,6 @@
 {
-  "name": "react-example",
+  "name": "infimart-bd",
+  "description": "InfiMart BD - অনলাইন গ্রোসারি ও মাসিক বাজার",
   "private": true,
   "version": "0.0.0",
   "type": "module",
