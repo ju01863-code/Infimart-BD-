@@ -21,7 +21,7 @@ import {
 import { Offer, Product } from '../../types';
 import { exportToExcel, exportToCSV } from '../../utils/excelExport';
 import { ConfirmModal } from '../ConfirmModal';
-import { compressImage } from '../../utils/imageCompressor';
+import { compressImage, FALLBACK_PRODUCT_IMAGE } from '../../utils/imageCompressor';
 
 interface OffersTabProps {
   offers: Offer[];
@@ -366,6 +366,9 @@ export const OffersTab: React.FC<OffersTabProps> = ({
                             src={offer.bannerImage}
                             alt={offer.title}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = FALLBACK_PRODUCT_IMAGE;
+                            }}
                           />
                         </div>
                       ) : (

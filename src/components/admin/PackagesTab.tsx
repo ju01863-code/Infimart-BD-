@@ -17,7 +17,7 @@ import {
 import { ComboPackage, ComboPackageProduct, Product } from '../../types';
 import { exportToExcel, exportToCSV } from '../../utils/excelExport';
 import { ConfirmModal } from '../ConfirmModal';
-import { compressImage } from '../../utils/imageCompressor';
+import { compressImage, FALLBACK_PRODUCT_IMAGE } from '../../utils/imageCompressor';
 
 interface PackagesTabProps {
   packages: ComboPackage[];
@@ -613,7 +613,14 @@ export const PackagesTab: React.FC<PackagesTabProps> = ({
                 <div className="flex items-center gap-3">
                   {previewImage ? (
                     <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-emerald-400 shrink-0">
-                      <img src={previewImage} alt="Package" className="w-full h-full object-cover" />
+                      <img
+                        src={previewImage}
+                        alt="Package"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = FALLBACK_PRODUCT_IMAGE;
+                        }}
+                      />
                     </div>
                   ) : (
                     <div className="w-16 h-16 rounded-xl bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-slate-400 shrink-0">

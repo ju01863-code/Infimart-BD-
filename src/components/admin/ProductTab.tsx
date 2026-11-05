@@ -56,7 +56,7 @@ export const ProductTab: React.FC<ProductTabProps> = ({
   // Restock Threshold & Stock Filter State
   const [globalThreshold, setGlobalThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('infimart_stock_threshold') || localStorage.getItem('fenimart_stock_threshold');
+      const saved = localStorage.getItem('infimart_stock_threshold');
       if (saved && !isNaN(Number(saved))) return Number(saved);
     }
     return settings?.defaultLowStockThreshold || 5;
@@ -187,7 +187,6 @@ export const ProductTab: React.FC<ProductTabProps> = ({
     setGlobalThreshold(validVal);
     if (typeof window !== 'undefined') {
       localStorage.setItem('infimart_stock_threshold', String(validVal));
-      localStorage.setItem('fenimart_stock_threshold', String(validVal));
     }
     if (onUpdateSettings) {
       onUpdateSettings({ defaultLowStockThreshold: validVal }).catch(() => {});

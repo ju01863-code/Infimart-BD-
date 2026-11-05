@@ -160,8 +160,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   // Session authentication check (valid for 24 hours)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    const token = localStorage.getItem('infimart_secure_token') || localStorage.getItem('fenimart_secure_token');
-    const authTime = localStorage.getItem('infimart_secure_timestamp') || localStorage.getItem('fenimart_secure_timestamp');
+    const token = localStorage.getItem('infimart_secure_token');
+    const authTime = localStorage.getItem('infimart_secure_timestamp');
     if (token === 'valid' && authTime) {
       const elapsed = Date.now() - Number(authTime);
       if (elapsed < SESSION_DURATION_MS) {
@@ -171,8 +171,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     // Expired or missing
     localStorage.removeItem('infimart_secure_token');
     localStorage.removeItem('infimart_secure_timestamp');
-    localStorage.removeItem('fenimart_secure_token');
-    localStorage.removeItem('fenimart_secure_timestamp');
     return false;
   });
 
@@ -186,8 +184,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   // Clear any existing lockout keys & sync Firestore settings/admin password
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('fenimart_failed_attempts');
-      localStorage.removeItem('fenimart_lockout_until');
       localStorage.removeItem('infimart_failed_attempts');
       localStorage.removeItem('infimart_lockout_until');
     }
@@ -233,20 +229,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   // Sound notification toggle (saved in localStorage)
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
-    return localStorage.getItem('fenimart_order_sound') !== 'false';
+    return localStorage.getItem('infimart_order_sound') !== 'false';
   });
 
   const toggleSound = () => {
     setSoundEnabled((prev) => {
       const next = !prev;
-      localStorage.setItem('fenimart_order_sound', String(next));
+      localStorage.setItem('infimart_order_sound', String(next));
       return next;
     });
   };
 
   // Real-time unread orders count from Firestore
   const unreadOrdersCount = useMemo(() => {
-    return props.orders.filter((o) => {
+    return (props.orders || []).filter((o) => {
       if (typeof o.isRead === 'boolean') return !o.isRead;
       const s = (o.status || '').toLowerCase();
       return s === 'new' || s === 'pending';
@@ -259,9 +255,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   useEffect(() => {
     if (!isAuthenticated) return;
+    const ordersList = props.orders || [];
     if (initialMountRef.current) {
       const ids = new Set<string>();
-      props.orders.forEach((o) => {
+      ordersList.forEach((o) => {
         if (o.id) ids.add(o.id);
       });
       knownOrderIdsRef.current = ids;
@@ -269,7 +266,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       return;
     }
 
-    props.orders.forEach((o) => {
+    ordersList.forEach((o) => {
       if (o.id && !knownOrderIdsRef.current.has(o.id)) {
         knownOrderIdsRef.current.add(o.id);
         if (soundEnabled) {
@@ -296,10 +293,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       setIsAuthenticated(true);
       localStorage.setItem('infimart_secure_token', 'valid');
       localStorage.setItem('infimart_secure_timestamp', String(Date.now()));
-      localStorage.setItem('fenimart_secure_token', 'valid');
-      localStorage.setItem('fenimart_secure_timestamp', String(Date.now()));
-      localStorage.removeItem('fenimart_failed_attempts');
-      localStorage.removeItem('fenimart_lockout_until');
       localStorage.removeItem('infimart_failed_attempts');
       localStorage.removeItem('infimart_lockout_until');
       setLoginError('');
@@ -313,8 +306,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     setIsAuthenticated(false);
     localStorage.removeItem('infimart_secure_token');
     localStorage.removeItem('infimart_secure_timestamp');
-    localStorage.removeItem('fenimart_secure_token');
-    localStorage.removeItem('fenimart_secure_timestamp');
     setInputPassword('');
     props.onBackToStore();
   };

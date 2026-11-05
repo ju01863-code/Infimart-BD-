@@ -1071,6 +1071,9 @@ export const OrderInboxTab: React.FC<OrderInboxTabProps> = ({
                                 src={order.paymentSlipUrl}
                                 alt="Slip thumbnail"
                                 className="w-5 h-5 object-cover rounded shrink-0 border border-indigo-300"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
                               />
                               <span>📸 পেমেন্ট স্ক্রিনশট / রসিদ দেখুন</span>
                             </button>
@@ -1266,6 +1269,9 @@ export const OrderInboxTab: React.FC<OrderInboxTabProps> = ({
                 src={viewingSlipUrl}
                 alt="Payment Slip Full Preview"
                 className="max-h-[70vh] w-auto max-w-full rounded-2xl object-contain shadow-md"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).alt = 'রসিদের ছবিটি লোড করা সম্ভব হয়নি';
+                }}
               />
             </div>
             <div className="p-3 border-t border-slate-200 bg-white flex justify-end">

@@ -1,7 +1,20 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, collection, limit, query, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import firebaseConfig from '../firebase-applet-config.json';
+import localConfig from '../firebase-applet-config.json';
+
+// Support production environment variables (e.g., when deployed from GitHub to Vercel/Netlify/Cloud Run)
+// with fallback to firebase-applet-config.json for AI Studio development
+export const firebaseConfig = {
+  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY as string) || localConfig?.apiKey || '',
+  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string) || localConfig?.authDomain || '',
+  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) || localConfig?.projectId || '',
+  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string) || localConfig?.storageBucket || '',
+  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || localConfig?.messagingSenderId || '',
+  appId: (import.meta.env.VITE_FIREBASE_APP_ID as string) || localConfig?.appId || '',
+  measurementId: (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID as string) || localConfig?.measurementId || '',
+  firestoreDatabaseId: (import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID as string) || localConfig?.firestoreDatabaseId || '(default)',
+};
 
 // Initialize Firebase App
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();

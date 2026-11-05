@@ -8,7 +8,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ settings, onAdminClick }) => {
-  const cleanPhone = settings.whatsapp.replace(/[^0-9]/g, '');
+  const cleanPhone = (settings.whatsapp || '+8801821558813').replace(/[^0-9]/g, '');
 
   return (
     <footer className="bg-[#0A4A29] text-white border-t-4 border-[#FFB300] mt-16">

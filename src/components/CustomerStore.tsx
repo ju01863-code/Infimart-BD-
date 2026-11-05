@@ -83,7 +83,7 @@ interface CustomerStoreProps {
 }
 
 export const CustomerStore: React.FC<CustomerStoreProps> = ({
-  products,
+  products = [],
   categories = [],
   specialOffers = [],
   offers = [],
