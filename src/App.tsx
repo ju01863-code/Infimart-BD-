@@ -814,7 +814,11 @@ export default function App() {
 
   // ================= REVIEWS HANDLERS =================
   const handleAddReview = async (reviewData: Omit<ProductReview, 'id'>) => {
-    await addDoc(collection(db, 'reviews'), reviewData);
+    const sanitized: Record<string, any> = {};
+    Object.entries(reviewData).forEach(([k, v]) => {
+      if (v !== undefined) sanitized[k] = v;
+    });
+    await addDoc(collection(db, 'reviews'), sanitized);
   };
   const handleUpdateReview = async (id: string, reviewData: Partial<ProductReview>) => {
     await updateDoc(doc(db, 'reviews', id), reviewData);

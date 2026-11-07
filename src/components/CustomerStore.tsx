@@ -214,8 +214,8 @@ export const CustomerStore: React.FC<CustomerStoreProps> = ({
     if (!newReviewName.trim() || newReviewName.trim().length < 2) {
       errors.name = 'আপনার নাম কমপক্ষে ২ অক্ষরের হতে হবে';
     }
-    if (!newReviewComment.trim() || newReviewComment.trim().length < 5) {
-      errors.comment = 'অনুগ্রহ করে কমপক্ষে ৫ অক্ষরের বিস্তারিত মন্তব্য লিখুন';
+    if (!newReviewComment.trim() || newReviewComment.trim().length < 2) {
+      errors.comment = 'অনুগ্রহ করে আপনার মূল্যবান মন্তব্য লিখুন';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -227,31 +227,40 @@ export const CustomerStore: React.FC<CustomerStoreProps> = ({
       setIsSubmittingReview(true);
       setReviewFormErrors({});
 
-      const newReview: Omit<ProductReview, 'id'> = {
-        productId: selectedProductForReviews.id || '',
-        productName: selectedProductForReviews.name,
+      const cleanPhone = newReviewPhone.trim();
+      const reviewPayload: Record<string, any> = {
+        productId: selectedProductForReviews.id || selectedProductForReviews.name || 'product',
+        productName: selectedProductForReviews.name || 'পণ্য',
         productImage: selectedProductForReviews.image || '',
         customerName: newReviewName.trim(),
-        customerPhone: newReviewPhone.trim() || undefined,
-        rating: Number(newReviewRating) || 5,
+        rating: Math.max(1, Math.min(5, Number(newReviewRating) || 5)),
         comment: newReviewComment.trim(),
-        status: 'approved', // Auto-approved by default so user sees their review immediately; admin can toggle to 'hidden' anytime
+        status: 'approved', // Auto-approved by default so customer sees their review immediately
         createdAt: new Date().toISOString(),
       };
 
+      if (cleanPhone) {
+        reviewPayload.customerPhone = cleanPhone;
+      }
+
       if (onAddReview) {
-        await onAddReview(newReview);
+        await onAddReview(reviewPayload as Omit<ProductReview, 'id'>);
       } else {
-        await addDoc(collection(db, 'reviews'), newReview);
+        await addDoc(collection(db, 'reviews'), reviewPayload);
       }
 
       setReviewToast('ধন্যবাদ! আপনার মূল্যবান রিভিউটি সফলভাবে প্রকাশিত হয়েছে।');
       setNewReviewComment('');
+      setNewReviewName('');
+      setNewReviewPhone('');
+      setNewReviewRating(5);
+      setNewReviewHoverRating(0);
       setReviewTab('list');
       setTimeout(() => setReviewToast(null), 4500);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to submit review:', err);
-      alert('রিভিউ জমা দিতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+      const errMsg = err instanceof Error ? err.message : String(err);
+      alert(`রিভিউ জমা দিতে সমস্যা হয়েছে: ${errMsg}`);
     } finally {
       setIsSubmittingReview(false);
     }
@@ -1946,7 +1955,7 @@ ${paymentDetailsText}
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  openProductReviewsModal(product);
+                                  openProductReviewsModal(product, ratingStats.hasReviews ? 'list' : 'write');
                                 }}
                                 className="flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-[#0A4A29] mb-1.5 transition text-left cursor-pointer group/rate"
                                 title="পণ্য রিভিউ ও রেটিং দেখুন বা লিখুন"
